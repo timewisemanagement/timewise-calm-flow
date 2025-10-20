@@ -76,6 +76,28 @@ const Dashboard = () => {
     }
   };
 
+  const generateSuggestions = async () => {
+    try {
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('generate-suggestions', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      
+      toast.success(data.message || 'Suggestions generated!');
+      await fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate suggestions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSuggestionFeedback = async (suggestionId: string, outcome: string) => {
     try {
       const { error } = await supabase
@@ -205,6 +227,10 @@ const Dashboard = () => {
                 Smart scheduling recommendations based on your calendar
               </p>
             </div>
+            <Button onClick={generateSuggestions} disabled={isLoading}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate AI Suggestions
+            </Button>
           </div>
 
           {suggestions.length === 0 ? (
