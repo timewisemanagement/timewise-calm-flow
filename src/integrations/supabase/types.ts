@@ -140,6 +140,7 @@ export type Database = {
           duration_minutes: number
           id: string
           priority: string | null
+          scheduled_at: string | null
           status: string | null
           tags: string[] | null
           title: string
@@ -152,6 +153,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           priority?: string | null
+          scheduled_at?: string | null
           status?: string | null
           tags?: string[] | null
           title: string
@@ -164,6 +166,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           priority?: string | null
+          scheduled_at?: string | null
           status?: string | null
           tags?: string[] | null
           title?: string

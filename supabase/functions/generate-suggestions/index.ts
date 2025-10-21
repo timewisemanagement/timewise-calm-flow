@@ -59,12 +59,13 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    // Fetch pending tasks
+    // Fetch pending tasks that are NOT manually scheduled
     const { data: tasks } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', user.id)
       .eq('status', 'pending')
+      .is('scheduled_at', null)
       .order('priority', { ascending: false });
 
     if (!tasks || tasks.length === 0) {

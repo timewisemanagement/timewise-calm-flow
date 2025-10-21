@@ -8,9 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Clock, Target } from "lucide-react";
+import { ArrowLeft, Plus, Clock, Target, CalendarIcon } from "lucide-react";
 import TaskCard from "@/components/TaskCard";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -21,6 +25,7 @@ interface Task {
   tags: string[];
   status: string;
   created_at: string;
+  scheduled_at: string | null;
 }
 
 const Tasks = () => {
@@ -34,6 +39,7 @@ const Tasks = () => {
     duration_minutes: 60,
     priority: "medium",
     tags: "",
+    scheduled_at: null as Date | null,
   });
 
   useEffect(() => {
@@ -85,6 +91,7 @@ const Tasks = () => {
         duration_minutes: newTask.duration_minutes,
         priority: newTask.priority,
         tags: tagsArray,
+        scheduled_at: newTask.scheduled_at?.toISOString() || null,
       });
 
       if (error) throw error;
@@ -97,6 +104,7 @@ const Tasks = () => {
         duration_minutes: 60,
         priority: "medium",
         tags: "",
+        scheduled_at: null,
       });
       fetchTasks();
     } catch (error: any) {
@@ -221,6 +229,59 @@ const Tasks = () => {
                     value={newTask.tags}
                     onChange={(e) => setNewTask({ ...newTask, tags: e.target.value })}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Schedule for specific time (optional)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newTask.scheduled_at && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newTask.scheduled_at ? (
+                          format(newTask.scheduled_at, "PPP 'at' p")
+                        ) : (
+                          <span>Pick a date and time</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={newTask.scheduled_at || undefined}
+                        onSelect={(date) => setNewTask({ ...newTask, scheduled_at: date || null })}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                      {newTask.scheduled_at && (
+                        <div className="p-3 border-t">
+                          <Label htmlFor="time">Time</Label>
+                          <Input
+                            id="time"
+                            type="time"
+                            value={format(newTask.scheduled_at, "HH:mm")}
+                            onChange={(e) => {
+                              const [hours, minutes] = e.target.value.split(":");
+                              const newDate = new Date(newTask.scheduled_at!);
+                              newDate.setHours(parseInt(hours), parseInt(minutes));
+                              setNewTask({ ...newTask, scheduled_at: newDate });
+                            }}
+                            className="mt-2"
+                          />
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                  {newTask.scheduled_at && (
+                    <p className="text-xs text-muted-foreground">
+                      AI suggestions will not change this scheduled time
+                    </p>
+                  )}
                 </div>
 
                 <Button
