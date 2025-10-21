@@ -58,34 +58,46 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bed_time: string | null
           created_at: string | null
           display_name: string | null
+          downtime_end: string | null
+          downtime_start: string | null
           email: string
           focus_preference: string | null
           id: string
           ideal_focus_duration: number | null
           timezone: string | null
           updated_at: string | null
+          wake_time: string | null
         }
         Insert: {
+          bed_time?: string | null
           created_at?: string | null
           display_name?: string | null
+          downtime_end?: string | null
+          downtime_start?: string | null
           email: string
           focus_preference?: string | null
           id: string
           ideal_focus_duration?: number | null
           timezone?: string | null
           updated_at?: string | null
+          wake_time?: string | null
         }
         Update: {
+          bed_time?: string | null
           created_at?: string | null
           display_name?: string | null
+          downtime_end?: string | null
+          downtime_start?: string | null
           email?: string
           focus_preference?: string | null
           id?: string
           ideal_focus_duration?: number | null
           timezone?: string | null
           updated_at?: string | null
+          wake_time?: string | null
         }
         Relationships: []
       }
@@ -135,12 +147,18 @@ export type Database = {
       }
       tasks: {
         Row: {
+          commute_minutes: number | null
           created_at: string | null
           description: string | null
           duration_minutes: number
           id: string
           priority: string | null
+          recurrence_days: string[] | null
+          recurrence_end_date: string | null
+          recurrence_pattern: string | null
           scheduled_at: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
           status: string | null
           tags: string[] | null
           title: string
@@ -148,12 +166,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          commute_minutes?: number | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number
           id?: string
           priority?: string | null
+          recurrence_days?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
           scheduled_at?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
           status?: string | null
           tags?: string[] | null
           title: string
@@ -161,12 +185,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          commute_minutes?: number | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number
           id?: string
           priority?: string | null
+          recurrence_days?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
           scheduled_at?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
           status?: string | null
           tags?: string[] | null
           title?: string

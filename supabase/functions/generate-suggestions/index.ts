@@ -25,6 +25,10 @@ interface Profile {
   focus_preference: string;
   ideal_focus_duration: number;
   timezone: string;
+  wake_time?: string;
+  bed_time?: string;
+  downtime_start?: string | null;
+  downtime_end?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -59,13 +63,14 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    // Fetch pending tasks that are NOT manually scheduled
+    // Fetch pending tasks that are NOT manually scheduled (no date/time set)
     const { data: tasks } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', user.id)
       .eq('status', 'pending')
-      .is('scheduled_at', null)
+      .is('scheduled_date', null)
+      .is('scheduled_time', null)
       .order('priority', { ascending: false });
 
     if (!tasks || tasks.length === 0) {
@@ -89,7 +94,13 @@ Deno.serve(async (req) => {
 
     // Prepare context for AI
     const context = {
-      profile: profile || { focus_preference: 'morning', ideal_focus_duration: 60, timezone: 'UTC' },
+      profile: profile || { 
+        focus_preference: 'morning', 
+        ideal_focus_duration: 60, 
+        timezone: 'UTC',
+        wake_time: '08:00:00',
+        bed_time: '22:00:00'
+      },
       tasks: tasks.slice(0, 10), // Limit to top 10 tasks
       calendarEvents: calendarEvents || [],
       currentTime: now.toISOString(),
@@ -107,7 +118,16 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a smart scheduling assistant. Given a user's tasks, calendar events, and preferences, suggest optimal times to schedule tasks. Consider:
+            content: `You are a smart scheduling assistant. Given a user's tasks, calendar events, and preferences, suggest optimal times to schedule tasks.
+
+CRITICAL CONSTRAINTS:
+- User wakes up at ${context.profile.wake_time || '08:00:00'} and goes to bed at ${context.profile.bed_time || '22:00:00'}
+- NEVER schedule tasks before wake time or after bedtime
+- Leave at least 10 minutes between tasks
+- For tasks with commute_minutes > 0, add that time (plus 10 minutes) before AND after the task
+${context.profile.downtime_start && context.profile.downtime_end ? `- User has downtime from ${context.profile.downtime_start} to ${context.profile.downtime_end} - avoid scheduling during this time unless absolutely necessary` : ''}
+
+PREFERENCES:
 - User's focus preference: ${context.profile.focus_preference} (morning/afternoon/evening)
 - Ideal focus duration: ${context.profile.ideal_focus_duration} minutes
 - Avoid scheduling during existing calendar events

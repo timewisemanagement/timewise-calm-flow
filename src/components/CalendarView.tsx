@@ -1,0 +1,108 @@
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface Task {
+  id: string;
+  title: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  priority: string;
+  recurrence_pattern?: string;
+}
+
+interface CalendarViewProps {
+  tasks: Task[];
+  currentMonth: Date;
+  onMonthChange: (date: Date) => void;
+  onTaskClick: (task: Task) => void;
+}
+
+export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick }: CalendarViewProps) {
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarStart = startOfWeek(monthStart);
+  const calendarEnd = endOfWeek(monthEnd);
+  
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  
+  const getTasksForDay = (day: Date) => {
+    return tasks.filter(task => {
+      if (!task.scheduled_date) return false;
+      const taskDate = new Date(task.scheduled_date);
+      return isSameDay(taskDate, day);
+    });
+  };
+
+  const previousMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() - 1);
+    onMonthChange(newDate);
+  };
+
+  const nextMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() + 1);
+    onMonthChange(newDate);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">{format(currentMonth, 'MMMM yyyy')}</h2>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={previousMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={nextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-2">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div key={day} className="text-center font-semibold p-2">
+            {day}
+          </div>
+        ))}
+        
+        {days.map(day => {
+          const dayTasks = getTasksForDay(day);
+          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isToday = isSameDay(day, new Date());
+          
+          return (
+            <Card 
+              key={day.toISOString()} 
+              className={`min-h-[100px] p-2 ${!isCurrentMonth ? 'opacity-50' : ''} ${isToday ? 'border-primary' : ''}`}
+            >
+              <div className="font-semibold mb-1">{format(day, 'd')}</div>
+              <div className="space-y-1">
+                {dayTasks.map(task => (
+                  <div
+                    key={task.id}
+                    onClick={() => onTaskClick(task)}
+                    className="cursor-pointer hover:bg-accent rounded p-1 text-xs"
+                  >
+                    <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'} className="text-xs mb-1">
+                      {task.priority}
+                    </Badge>
+                    <div className="truncate">{task.title}</div>
+                    {task.scheduled_time && (
+                      <div className="text-muted-foreground text-xs">
+                        {format(new Date(`2000-01-01T${task.scheduled_time}`), 'h:mm a')}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

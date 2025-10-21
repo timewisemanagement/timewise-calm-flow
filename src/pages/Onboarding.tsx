@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Sunrise, Sunset, Clock } from "lucide-react";
 
@@ -14,6 +15,11 @@ const Onboarding = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [focusPreference, setFocusPreference] = useState<"morning" | "evening" | "flexible">("flexible");
   const [idealFocusDuration, setIdealFocusDuration] = useState([60]);
+  const [wakeTime, setWakeTime] = useState('08:00');
+  const [bedTime, setBedTime] = useState('22:00');
+  const [hasDowntime, setHasDowntime] = useState(false);
+  const [downtimeStart, setDowntimeStart] = useState('12:00');
+  const [downtimeEnd, setDowntimeEnd] = useState('13:00');
 
   const handleComplete = async () => {
     setIsLoading(true);
@@ -30,6 +36,10 @@ const Onboarding = () => {
         .update({
           focus_preference: focusPreference,
           ideal_focus_duration: idealFocusDuration[0],
+          wake_time: wakeTime,
+          bed_time: bedTime,
+          downtime_start: hasDowntime ? downtimeStart : null,
+          downtime_end: hasDowntime ? downtimeEnd : null,
         })
         .eq("id", user.id);
 
@@ -117,6 +127,66 @@ const Onboarding = () => {
                 <span>180 min</span>
               </div>
             </div>
+          </div>
+
+          {/* Sleep Schedule */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="wakeTime">Wake up time</Label>
+              <Input
+                id="wakeTime"
+                type="time"
+                value={wakeTime}
+                onChange={(e) => setWakeTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bedTime">Bedtime</Label>
+              <Input
+                id="bedTime"
+                type="time"
+                value={bedTime}
+                onChange={(e) => setBedTime(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Downtime */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="downtime"
+                checked={hasDowntime}
+                onChange={(e) => setHasDowntime(e.target.checked)}
+                className="rounded"
+              />
+              <Label htmlFor="downtime" className="cursor-pointer">
+                I want scheduled downtime during the day
+              </Label>
+            </div>
+            {hasDowntime && (
+              <div className="grid grid-cols-2 gap-4 pl-6">
+                <div className="space-y-2">
+                  <Label htmlFor="downtimeStart">Downtime starts</Label>
+                  <Input
+                    id="downtimeStart"
+                    type="time"
+                    value={downtimeStart}
+                    onChange={(e) => setDowntimeStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="downtimeEnd">Downtime ends</Label>
+                  <Input
+                    id="downtimeEnd"
+                    type="time"
+                    value={downtimeEnd}
+                    onChange={(e) => setDowntimeEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <Button
