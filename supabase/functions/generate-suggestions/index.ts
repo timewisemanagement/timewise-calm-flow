@@ -63,22 +63,24 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    // Fetch pending tasks that are NOT manually scheduled (no date/time set)
-    const { data: tasks } = await supabase
+    // Fetch ALL tasks (including scheduled ones) for re-evaluation
+    const { data: allTasks } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', user.id)
-      .eq('status', 'pending')
-      .is('scheduled_date', null)
-      .is('scheduled_time', null)
+      .in('status', ['pending', 'scheduled'])
       .order('priority', { ascending: false });
 
-    if (!tasks || tasks.length === 0) {
+    if (!allTasks || allTasks.length === 0) {
       return new Response(
-        JSON.stringify({ message: 'No pending tasks to schedule', suggestions: [] }),
+        JSON.stringify({ message: 'No tasks to schedule', suggestions: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Separate tasks: unscheduled (AI needs to place) vs scheduled (user/AI placed, check for conflicts)
+    const unscheduledTasks = allTasks.filter(t => !t.scheduled_date || !t.scheduled_time);
+    const scheduledTasks = allTasks.filter(t => t.scheduled_date && t.scheduled_time);
 
     // Fetch calendar events for next 7 days
     const now = new Date();
@@ -101,7 +103,8 @@ Deno.serve(async (req) => {
         wake_time: '08:00:00',
         bed_time: '22:00:00'
       },
-      tasks: tasks.slice(0, 10), // Limit to top 10 tasks
+      unscheduledTasks: unscheduledTasks,
+      scheduledTasks: scheduledTasks,
       calendarEvents: calendarEvents || [],
       currentTime: now.toISOString(),
     };
@@ -118,42 +121,54 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a smart scheduling assistant. Given a user's tasks, calendar events, and preferences, suggest optimal times to schedule tasks.
+            content: `You are a smart scheduling assistant that prevents conflicts and optimizes schedules.
 
-CRITICAL CONSTRAINTS:
-- User wakes up at ${context.profile.wake_time || '08:00:00'} and goes to bed at ${context.profile.bed_time || '22:00:00'}
-- NEVER schedule tasks before wake time or after bedtime
-- Leave at least 10 minutes between tasks
-- For tasks with commute_minutes > 0, add that time (plus 10 minutes) before AND after the task
-${context.profile.downtime_start && context.profile.downtime_end ? `- User has downtime from ${context.profile.downtime_start} to ${context.profile.downtime_end} - avoid scheduling during this time unless absolutely necessary` : ''}
+CRITICAL RULES:
+1. NO OVERLAPS: Tasks cannot overlap. Check scheduled_time and duration_minutes for conflicts.
+2. BUFFER TIME: Leave at least 10 minutes between all tasks.
+3. COMMUTE TIME: For tasks with commute_minutes > 0, add (commute_minutes + 10) BEFORE and AFTER the task.
+4. WAKE/SLEEP: User wakes at ${context.profile.wake_time || '08:00:00'}, sleeps at ${context.profile.bed_time || '22:00:00'}. Never schedule outside this window.
+${context.profile.downtime_start && context.profile.downtime_end ? `5. DOWNTIME: User has downtime ${context.profile.downtime_start} to ${context.profile.downtime_end}. Avoid unless necessary.` : ''}
+
+CONFLICT RESOLUTION:
+- If a day is too full, move lower priority tasks to the next available day
+- Respect user-scheduled tasks but resolve conflicts by moving other tasks
+- Always find a valid time slot with no overlaps
 
 PREFERENCES:
-- User's focus preference: ${context.profile.focus_preference} (morning/afternoon/evening)
+- Focus preference: ${context.profile.focus_preference}
 - Ideal focus duration: ${context.profile.ideal_focus_duration} minutes
-- Avoid scheduling during existing calendar events
+- Avoid calendar events
 - Prioritize high-priority tasks
-- Match task duration with available free time blocks
 - Current time: ${context.currentTime}
 
-Return a JSON array of suggestions with this exact structure:
+INPUT:
+- Unscheduled tasks: Need time slots assigned
+- Scheduled tasks: Already have times, but check for conflicts
+- Calendar events: External events to avoid
+
+OUTPUT JSON (return ONLY the JSON array):
 [
   {
     "task_id": "uuid",
-    "suggested_start": "2025-10-20T09:00:00Z",
+    "suggested_start": "2025-10-22T09:00:00Z",
     "duration_minutes": 60,
     "score": 0.95,
-    "reasoning": "Morning slot matches user preference"
+    "reasoning": "No conflicts, morning preference"
   }
 ]
 
-Return ONLY the JSON array, no other text.`
+Return suggestions for ALL tasks (unscheduled + any scheduled tasks that need to move due to conflicts).`
           },
           {
             role: 'user',
-            content: `Tasks: ${JSON.stringify(context.tasks)}
+            content: `Unscheduled Tasks (need placement): ${JSON.stringify(context.unscheduledTasks)}
+
+Scheduled Tasks (check for conflicts): ${JSON.stringify(context.scheduledTasks)}
+
 Calendar Events: ${JSON.stringify(context.calendarEvents)}
 
-Generate up to 5 scheduling suggestions for the highest priority tasks.`
+Re-evaluate the schedule, resolve all conflicts, and return suggestions for optimal placement.`
           }
         ],
         temperature: 0.7,
@@ -192,7 +207,7 @@ Generate up to 5 scheduling suggestions for the highest priority tasks.`
       .eq('user_id', user.id)
       .is('outcome', null);
 
-    // Insert new suggestions and auto-schedule tasks
+    // Insert new suggestions and auto-schedule ALL tasks (resolving conflicts)
     const insertData = suggestions.map((s: any) => ({
       user_id: user.id,
       task_id: s.task_id,
@@ -210,7 +225,7 @@ Generate up to 5 scheduling suggestions for the highest priority tasks.`
         console.error('Error inserting suggestions:', insertError);
       }
 
-      // Automatically schedule the tasks with the AI suggestions
+      // Update ALL tasks with the conflict-free schedule
       for (const suggestion of suggestions) {
         const suggestedStart = new Date(suggestion.suggested_start);
         const scheduledDate = suggestedStart.toISOString().split('T')[0];
@@ -227,11 +242,11 @@ Generate up to 5 scheduling suggestions for the highest priority tasks.`
       }
     }
 
-    console.log(`Generated ${insertData.length} suggestions and auto-scheduled tasks`);
+    console.log(`Optimized schedule with ${insertData.length} conflict-free tasks`);
 
     return new Response(
       JSON.stringify({ 
-        message: `Generated ${insertData.length} suggestions and auto-scheduled tasks`,
+        message: `Optimized schedule with ${insertData.length} conflict-free tasks`,
         suggestions: insertData 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

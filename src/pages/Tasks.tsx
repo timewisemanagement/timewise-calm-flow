@@ -9,6 +9,7 @@ import { Plus, ChevronLeft, ChevronRight, User, LogOut } from "lucide-react";
 import TaskCard from "@/components/TaskCard";
 import { TaskCreationDialog } from "@/components/TaskCreationDialog";
 import { CalendarView } from "@/components/CalendarView";
+import { TimelineView } from "@/components/TimelineView";
 import { format, startOfDay, endOfDay, addDays, parseISO } from "date-fns";
 
 interface Task {
@@ -182,45 +183,13 @@ const Tasks = () => {
                 <CardContent className="py-12 text-center">
                   <h3 className="text-lg font-semibold mb-2">No tasks for {format(currentDate, 'MMMM d')}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Create a task or let AI schedule your pending tasks
+                    Create a task and let AI schedule it optimally
                   </p>
                   <Button onClick={() => setIsDialogOpen(true)}>Create Task</Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-6">
-                {pendingTasks.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Pending / Scheduled</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {pendingTasks.map(task => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onDelete={handleDeleteTask}
-                          onUpdateStatus={handleUpdateStatus}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {completedTasks.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Completed</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
-                      {completedTasks.map(task => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onDelete={handleDeleteTask}
-                          onUpdateStatus={handleUpdateStatus}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <TimelineView tasks={todayTasks} />
             )}
           </TabsContent>
 

@@ -102,24 +102,19 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
 
       if (error) throw error;
 
-      // If task has no date/time, automatically schedule it with AI
-      if (!taskToCreate.scheduled_date || !taskToCreate.scheduled_time) {
-        toast.success('Task created! AI is scheduling it for you...');
-        
-        // Call AI to schedule the task
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          await supabase.functions.invoke('generate-suggestions', {
-            headers: {
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-          });
-        } catch (aiError) {
-          console.error('AI scheduling error:', aiError);
-          toast.error('Task created but AI scheduling failed. You can schedule it manually.');
-        }
-      } else {
-        toast.success('Task created successfully!');
+      // Always call AI to re-evaluate and prevent conflicts
+      toast.success('Task created! AI is optimizing your schedule...');
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await supabase.functions.invoke('generate-suggestions', {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+        });
+      } catch (aiError) {
+        console.error('AI scheduling error:', aiError);
+        toast.error('Task created but AI optimization failed.');
       }
 
       setNewTask({
@@ -274,26 +269,39 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Date (optional)</Label>
-                <Input
-                  type="date"
-                  value={newTask.scheduled_date}
-                  onChange={(e) => setNewTask({ ...newTask, scheduled_date: e.target.value })}
-                />
-              </div>
+            {newTask.recurrence_pattern === 'once' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Date (optional)</Label>
+                  <Input
+                    type="date"
+                    value={newTask.scheduled_date}
+                    onChange={(e) => setNewTask({ ...newTask, scheduled_date: e.target.value })}
+                  />
+                </div>
 
+                <div>
+                  <Label>Time (optional, requires date)</Label>
+                  <Input
+                    type="time"
+                    value={newTask.scheduled_time}
+                    onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
+                    disabled={!newTask.scheduled_date}
+                  />
+                </div>
+              </div>
+            )}
+
+            {(newTask.recurrence_pattern === 'daily' || newTask.recurrence_pattern === 'weekly') && (
               <div>
-                <Label>Time (optional, requires date)</Label>
+                <Label>Time (optional)</Label>
                 <Input
                   type="time"
                   value={newTask.scheduled_time}
                   onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
-                  disabled={!newTask.scheduled_date}
                 />
               </div>
-            </div>
+            )}
 
             <Button onClick={() => handleCreateTask()} className="w-full">
               Create Task
