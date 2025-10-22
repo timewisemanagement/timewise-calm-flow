@@ -192,7 +192,7 @@ Generate up to 5 scheduling suggestions for the highest priority tasks.`
       .eq('user_id', user.id)
       .is('outcome', null);
 
-    // Insert new suggestions into database
+    // Insert new suggestions and auto-schedule tasks
     const insertData = suggestions.map((s: any) => ({
       user_id: user.id,
       task_id: s.task_id,
@@ -209,13 +209,29 @@ Generate up to 5 scheduling suggestions for the highest priority tasks.`
       if (insertError) {
         console.error('Error inserting suggestions:', insertError);
       }
+
+      // Automatically schedule the tasks with the AI suggestions
+      for (const suggestion of suggestions) {
+        const suggestedStart = new Date(suggestion.suggested_start);
+        const scheduledDate = suggestedStart.toISOString().split('T')[0];
+        const scheduledTime = suggestedStart.toISOString().split('T')[1].substring(0, 5);
+
+        await supabase
+          .from('tasks')
+          .update({
+            scheduled_date: scheduledDate,
+            scheduled_time: scheduledTime,
+            status: 'scheduled'
+          })
+          .eq('id', suggestion.task_id);
+      }
     }
 
-    console.log(`Generated ${insertData.length} suggestions`);
+    console.log(`Generated ${insertData.length} suggestions and auto-scheduled tasks`);
 
     return new Response(
       JSON.stringify({ 
-        message: `Generated ${insertData.length} suggestions`,
+        message: `Generated ${insertData.length} suggestions and auto-scheduled tasks`,
         suggestions: insertData 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

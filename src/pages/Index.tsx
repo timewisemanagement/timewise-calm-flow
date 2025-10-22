@@ -7,11 +7,11 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect to dashboard if already authenticated
+    // Redirect to main page if already authenticated
     import("@/integrations/supabase/client").then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
-          navigate("/dashboard");
+          navigate("/");
         }
       });
     });

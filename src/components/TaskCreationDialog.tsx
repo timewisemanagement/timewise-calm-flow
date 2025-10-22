@@ -102,7 +102,26 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
 
       if (error) throw error;
 
-      toast.success('Task created successfully!');
+      // If task has no date/time, automatically schedule it with AI
+      if (!taskToCreate.scheduled_date || !taskToCreate.scheduled_time) {
+        toast.success('Task created! AI is scheduling it for you...');
+        
+        // Call AI to schedule the task
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await supabase.functions.invoke('generate-suggestions', {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          });
+        } catch (aiError) {
+          console.error('AI scheduling error:', aiError);
+          toast.error('Task created but AI scheduling failed. You can schedule it manually.');
+        }
+      } else {
+        toast.success('Task created successfully!');
+      }
+
       setNewTask({
         title: '',
         description: '',

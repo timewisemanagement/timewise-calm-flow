@@ -46,7 +46,7 @@ const Onboarding = () => {
       if (error) throw error;
 
       toast.success("Preferences saved!");
-      navigate("/dashboard");
+      navigate("/");
     } catch (error: any) {
       toast.error(error.message || "Failed to save preferences");
     } finally {

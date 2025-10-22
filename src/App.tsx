@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,11 +20,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Tasks />} />
+          <Route path="/welcome" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

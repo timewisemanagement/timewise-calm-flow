@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, User, LogOut } from "lucide-react";
 import TaskCard from "@/components/TaskCard";
 import { TaskCreationDialog } from "@/components/TaskCreationDialog";
 import { CalendarView } from "@/components/CalendarView";
@@ -102,6 +102,11 @@ const Tasks = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
   const getTasksForDate = (date: Date) => {
     const dateStart = startOfDay(date);
     const dateEnd = endOfDay(date);
@@ -127,18 +132,23 @@ const Tasks = () => {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
             <div>
               <h1 className="text-xl font-bold">My Tasks</h1>
               <p className="text-sm text-muted-foreground">Manage your tasks and schedule</p>
             </div>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-primary">
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-primary">
+              <Plus className="w-4 h-4 mr-2" />
+              New Task
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => navigate("/profile")}>
+              <User className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
 

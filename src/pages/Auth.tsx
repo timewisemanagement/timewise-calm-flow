@@ -20,7 +20,7 @@ const Auth = () => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/");
       }
     });
   }, [navigate]);
@@ -38,7 +38,7 @@ const Auth = () => {
             data: {
               display_name: displayName,
             },
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/`,
           },
         });
 
@@ -53,7 +53,7 @@ const Auth = () => {
 
         if (error) throw error;
         toast.success("Signed in successfully!");
-        navigate("/dashboard");
+        navigate("/");
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
