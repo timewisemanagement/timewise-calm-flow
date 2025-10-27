@@ -1,6 +1,8 @@
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Trash2, Edit, Check } from "lucide-react";
 
 interface Task {
   id: string;
@@ -15,10 +17,13 @@ interface Task {
 
 interface TimelineViewProps {
   tasks: Task[];
+  onDeleteTask: (taskId: string) => void;
+  onUpdateStatus: (taskId: string, status: string) => void;
+  onEditTask: (task: Task) => void;
 }
 
-export function TimelineView({ tasks }: TimelineViewProps) {
-  // Generate hours from 12am to 11pm
+export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask }: TimelineViewProps) {
+  // Generate hours from 12am to 11pm (0-23)
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
   const getTasksForHour = (hour: number) => {
@@ -37,6 +42,7 @@ export function TimelineView({ tasks }: TimelineViewProps) {
     if (hour === 0) return '12am';
     if (hour < 12) return `${hour}am`;
     if (hour === 12) return '12pm';
+    if (hour === 23) return '11pm';
     return `${hour - 12}pm`;
   };
 
@@ -51,7 +57,7 @@ export function TimelineView({ tasks }: TimelineViewProps) {
 
   return (
     <div className="space-y-0 border rounded-lg overflow-hidden bg-card">
-      {hours.map((hour) => {
+      {hours.slice(0, 23).map((hour) => {
         const hourTasks = getTasksForHour(hour);
         
         return (
@@ -62,34 +68,68 @@ export function TimelineView({ tasks }: TimelineViewProps) {
             <div className="flex-1 p-2 min-h-[60px]">
               {hourTasks.length > 0 ? (
                 <div className="space-y-2">
-                  {hourTasks.map((task) => (
-                    <Card 
-                      key={task.id} 
-                      className={`p-3 ${task.status === 'completed' ? 'opacity-60' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">{task.title}</span>
-                            <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                              {task.priority}
-                            </Badge>
+                  {hourTasks.map((task) => {
+                    const isCompleted = task.status === 'completed';
+                    return (
+                      <Card 
+                        key={task.id} 
+                        className={`p-3 transition-opacity ${isCompleted ? 'opacity-50' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-medium ${isCompleted ? 'line-through' : ''}`}>{task.title}</span>
+                              <Badge variant="outline" className={getPriorityColor(task.priority)}>
+                                {task.priority}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>{task.scheduled_time}</span>
+                              <span>•</span>
+                              <span>{task.duration_minutes} min</span>
+                              {task.commute_minutes && task.commute_minutes > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span>Commute: {task.commute_minutes} min</span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{task.scheduled_time}</span>
-                            <span>•</span>
-                            <span>{task.duration_minutes} min</span>
-                            {task.commute_minutes && task.commute_minutes > 0 && (
-                              <>
-                                <span>•</span>
-                                <span>Commute: {task.commute_minutes} min</span>
-                              </>
+                          <div className="flex gap-1">
+                            {!isCompleted && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={() => onUpdateStatus(task.id, 'completed')}
+                                title="Mark as finished"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={() => onEditTask(task)}
+                              title="Edit task"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-destructive"
+                              onClick={() => onDeleteTask(task.id)}
+                              title="Delete task"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="h-full flex items-center text-muted-foreground text-sm">

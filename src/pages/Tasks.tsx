@@ -189,7 +189,12 @@ const Tasks = () => {
                 </CardContent>
               </Card>
             ) : (
-              <TimelineView tasks={todayTasks} />
+              <TimelineView 
+                tasks={todayTasks}
+                onDeleteTask={handleDeleteTask}
+                onUpdateStatus={handleUpdateStatus}
+                onEditTask={(task) => toast.info(`Edit feature coming soon for: ${task.title}`)}
+              />
             )}
           </TabsContent>
 
@@ -201,9 +206,10 @@ const Tasks = () => {
                 tasks={tasks}
                 currentMonth={currentMonth}
                 onMonthChange={setCurrentMonth}
-                onTaskClick={(task) => {
-                  toast.info(`Task: ${task.title}`);
-                }}
+                onTaskClick={(task) => toast.info(`Task: ${task.title}`)}
+                onDeleteTask={handleDeleteTask}
+                onUpdateStatus={handleUpdateStatus}
+                onEditTask={(task) => toast.info(`Edit feature coming soon for: ${task.title}`)}
               />
             )}
           </TabsContent>

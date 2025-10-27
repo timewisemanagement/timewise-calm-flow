@@ -1,8 +1,14 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, Edit, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 interface Task {
   id: string;
@@ -10,6 +16,7 @@ interface Task {
   scheduled_date: string | null;
   scheduled_time: string | null;
   priority: string;
+  status: string;
   recurrence_pattern?: string;
 }
 
@@ -18,9 +25,12 @@ interface CalendarViewProps {
   currentMonth: Date;
   onMonthChange: (date: Date) => void;
   onTaskClick: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onUpdateStatus: (taskId: string, status: string) => void;
+  onEditTask: (task: Task) => void;
 }
 
-export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick }: CalendarViewProps) {
+export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick, onDeleteTask, onUpdateStatus, onEditTask }: CalendarViewProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
@@ -81,23 +91,45 @@ export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick }
             >
               <div className="font-semibold mb-1">{format(day, 'd')}</div>
               <div className="space-y-1">
-                {dayTasks.map(task => (
-                  <div
-                    key={task.id}
-                    onClick={() => onTaskClick(task)}
-                    className="cursor-pointer hover:bg-accent rounded p-1 text-xs"
-                  >
-                    <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'} className="text-xs mb-1">
-                      {task.priority}
-                    </Badge>
-                    <div className="truncate">{task.title}</div>
-                    {task.scheduled_time && (
-                      <div className="text-muted-foreground text-xs">
-                        {format(new Date(`2000-01-01T${task.scheduled_time}`), 'h:mm a')}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {dayTasks.map(task => {
+                  const isCompleted = task.status === 'completed';
+                  return (
+                    <ContextMenu key={task.id}>
+                      <ContextMenuTrigger>
+                        <div
+                          onClick={() => onTaskClick(task)}
+                          className={`cursor-pointer hover:bg-accent rounded p-1 text-xs transition-opacity ${isCompleted ? 'opacity-50' : ''}`}
+                        >
+                          <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'} className="text-xs mb-1">
+                            {task.priority}
+                          </Badge>
+                          <div className={`truncate ${isCompleted ? 'line-through' : ''}`}>{task.title}</div>
+                          {task.scheduled_time && (
+                            <div className="text-muted-foreground text-xs">
+                              {format(new Date(`2000-01-01T${task.scheduled_time}`), 'h:mm a')}
+                            </div>
+                          )}
+                        </div>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        {!isCompleted && (
+                          <ContextMenuItem onClick={() => onUpdateStatus(task.id, 'completed')}>
+                            <Check className="mr-2 h-4 w-4" />
+                            Mark as Finished
+                          </ContextMenuItem>
+                        )}
+                        <ContextMenuItem onClick={() => onEditTask(task)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => onDeleteTask(task.id)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })}
               </div>
             </Card>
           );

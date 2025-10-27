@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,7 +69,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       return;
     }
 
-    if (taskToCreate.scheduled_time && !taskToCreate.scheduled_date) {
+    if (taskToCreate.scheduled_time && !taskToCreate.scheduled_date && taskToCreate.recurrence_pattern === 'once') {
       toast.error('Please select a date before setting a time');
       return;
     }
@@ -84,6 +84,159 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Fetch existing tasks for validation
+      const { data: existingTasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id);
+
+      // Validation: Check for duplicate task names on the same day
+      if (taskToCreate.scheduled_date && taskToCreate.recurrence_pattern === 'once') {
+        const duplicateTask = existingTasks?.find(
+          t => t.title === taskToCreate.title && t.scheduled_date === taskToCreate.scheduled_date
+        );
+        if (duplicateTask) {
+          const confirmed = window.confirm(
+            `You already have a task named "${taskToCreate.title}" on ${taskToCreate.scheduled_date}. Are you sure you want to create another one?`
+          );
+          if (!confirmed) return;
+        }
+      }
+
+      // Validation: Check for overlapping tasks (only if both date and time are specified)
+      if (taskToCreate.scheduled_date && taskToCreate.scheduled_time) {
+        const startTime = new Date(`${taskToCreate.scheduled_date}T${taskToCreate.scheduled_time}`);
+        const endTime = new Date(startTime.getTime() + taskToCreate.duration_minutes * 60000);
+
+        const overlappingTask = existingTasks?.find(t => {
+          if (!t.scheduled_date || !t.scheduled_time) return false;
+          const existingStart = new Date(`${t.scheduled_date}T${t.scheduled_time}`);
+          const existingEnd = new Date(existingStart.getTime() + t.duration_minutes * 60000);
+          
+          return t.scheduled_date === taskToCreate.scheduled_date && (
+            (startTime >= existingStart && startTime < existingEnd) ||
+            (endTime > existingStart && endTime <= existingEnd) ||
+            (startTime <= existingStart && endTime >= existingEnd)
+          );
+        });
+
+        if (overlappingTask) {
+          toast.error(`This task overlaps with "${overlappingTask.title}". Please choose a different time.`);
+          return;
+        }
+
+        // Validation: Check for commute window conflicts
+        const commuteConflict = existingTasks?.find(t => {
+          if (!t.scheduled_date || !t.scheduled_time || (!t.commute_minutes && !taskToCreate.commute_minutes)) return false;
+          const existingStart = new Date(`${t.scheduled_date}T${t.scheduled_time}`);
+          const existingCommuteStart = new Date(existingStart.getTime() - (t.commute_minutes || 0 + 10) * 60000);
+          const existingEnd = new Date(existingStart.getTime() + t.duration_minutes * 60000);
+          const existingCommuteEnd = new Date(existingEnd.getTime() + (t.commute_minutes || 0 + 10) * 60000);
+
+          const taskCommuteStart = new Date(startTime.getTime() - (taskToCreate.commute_minutes + 10) * 60000);
+          const taskCommuteEnd = new Date(endTime.getTime() + (taskToCreate.commute_minutes + 10) * 60000);
+
+          return t.scheduled_date === taskToCreate.scheduled_date && (
+            (taskCommuteStart >= existingCommuteStart && taskCommuteStart < existingCommuteEnd) ||
+            (taskCommuteEnd > existingCommuteStart && taskCommuteEnd <= existingCommuteEnd) ||
+            (taskCommuteStart <= existingCommuteStart && taskCommuteEnd >= existingCommuteEnd)
+          );
+        });
+
+        if (commuteConflict) {
+          const confirmed = window.confirm(
+            `This task may conflict with the commute window for "${commuteConflict.title}". Are you sure you want to schedule it at this time?`
+          );
+          if (!confirmed) return;
+        }
+      }
+
+      // Determine if AI should be triggered
+      const hasSpecificDateTime = taskToCreate.scheduled_date && taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
+      const hasOnlyDate = taskToCreate.scheduled_date && !taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
+      const isRecurringWithTime = (taskToCreate.recurrence_pattern === 'daily' || taskToCreate.recurrence_pattern === 'weekly') && taskToCreate.scheduled_time;
+      const isRecurringWithoutTime = (taskToCreate.recurrence_pattern === 'daily' || taskToCreate.recurrence_pattern === 'weekly') && !taskToCreate.scheduled_time;
+      
+      const shouldTriggerAI = hasOnlyDate || isRecurringWithoutTime;
+
+      // Handle recurring tasks with specific time - create multiple instances
+      if (isRecurringWithTime) {
+        const tasksToCreate = [];
+        const startDate = new Date();
+        const endDate = taskToCreate.recurrence_end_date ? new Date(taskToCreate.recurrence_end_date) : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+        let currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          if (taskToCreate.recurrence_pattern === 'daily') {
+            tasksToCreate.push({
+              user_id: user.id,
+              title: taskToCreate.title,
+              description: taskToCreate.description,
+              duration_minutes: taskToCreate.duration_minutes,
+              priority: taskToCreate.priority,
+              tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
+              status: 'scheduled',
+              scheduled_date: currentDate.toISOString().split('T')[0],
+              scheduled_time: taskToCreate.scheduled_time,
+              commute_minutes: taskToCreate.commute_minutes,
+              recurrence_pattern: taskToCreate.recurrence_pattern,
+              recurrence_days: taskToCreate.recurrence_days,
+              recurrence_end_date: taskToCreate.recurrence_end_date || null,
+            });
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+          } else if (taskToCreate.recurrence_pattern === 'weekly' && taskToCreate.recurrence_days.length > 0) {
+            const dayOfWeek = currentDate.getDay();
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            if (taskToCreate.recurrence_days.includes(dayNames[dayOfWeek])) {
+              tasksToCreate.push({
+                user_id: user.id,
+                title: taskToCreate.title,
+                description: taskToCreate.description,
+                duration_minutes: taskToCreate.duration_minutes,
+                priority: taskToCreate.priority,
+                tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
+                status: 'scheduled',
+                scheduled_date: currentDate.toISOString().split('T')[0],
+                scheduled_time: taskToCreate.scheduled_time,
+                commute_minutes: taskToCreate.commute_minutes,
+                recurrence_pattern: taskToCreate.recurrence_pattern,
+                recurrence_days: taskToCreate.recurrence_days,
+                recurrence_end_date: taskToCreate.recurrence_end_date || null,
+              });
+            }
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+          }
+        }
+
+        if (tasksToCreate.length === 0) {
+          toast.error('No tasks to create. Please select days for weekly recurrence.');
+          return;
+        }
+
+        const { error } = await supabase.from('tasks').insert(tasksToCreate);
+        if (error) throw error;
+        
+        toast.success(`Created ${tasksToCreate.length} recurring tasks`);
+        setNewTask({
+          title: '',
+          description: '',
+          duration_minutes: 60,
+          priority: 'medium',
+          tags: '',
+          scheduled_date: '',
+          scheduled_time: '',
+          commute_minutes: 0,
+          recurrence_pattern: 'once',
+          recurrence_days: [],
+          recurrence_end_date: '',
+        });
+        onOpenChange(false);
+        onTaskCreated();
+        return;
+      }
+
+      // Create single task
       const { error } = await supabase.from('tasks').insert({
         user_id: user.id,
         title: taskToCreate.title,
@@ -102,19 +255,22 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
 
       if (error) throw error;
 
-      // Always call AI to re-evaluate and prevent conflicts
-      toast.success('Task created! AI is optimizing your schedule...');
+      toast.success('Task created!');
       
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await supabase.functions.invoke('generate-suggestions', {
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-        });
-      } catch (aiError) {
-        console.error('AI scheduling error:', aiError);
-        toast.error('Task created but AI optimization failed.');
+      // Auto-trigger AI suggestions if needed
+      if (shouldTriggerAI) {
+        toast.info('AI is optimizing your schedule...');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await supabase.functions.invoke('generate-suggestions', {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          });
+        } catch (aiError) {
+          console.error('AI scheduling error:', aiError);
+          toast.error('Task created but AI optimization failed.');
+        }
       }
 
       setNewTask({
@@ -156,6 +312,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
+            <DialogDescription>Fill in the details for your new task</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
