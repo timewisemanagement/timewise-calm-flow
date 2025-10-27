@@ -41,8 +41,14 @@ export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick, 
   const getTasksForDay = (day: Date) => {
     return tasks.filter(task => {
       if (!task.scheduled_date) return false;
-      const taskDate = new Date(task.scheduled_date);
+      // Parse date as local date to avoid timezone shift
+      const [year, month, dayNum] = task.scheduled_date.split('-').map(Number);
+      const taskDate = new Date(year, month - 1, dayNum);
       return isSameDay(taskDate, day);
+    }).sort((a, b) => {
+      // Sort by scheduled time, earliest first
+      if (!a.scheduled_time || !b.scheduled_time) return 0;
+      return a.scheduled_time.localeCompare(b.scheduled_time);
     });
   };
 

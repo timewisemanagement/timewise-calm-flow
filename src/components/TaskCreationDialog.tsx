@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { WarningDialog } from '@/components/WarningDialog';
 
 interface TaskCreationDialogProps {
   open: boolean;
@@ -47,7 +47,12 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
     recurrence_days: [],
     recurrence_end_date: '',
   });
-  const [showDowntimeWarning, setShowDowntimeWarning] = useState(false);
+  const [warningDialog, setWarningDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [pendingTask, setPendingTask] = useState<NewTask | null>(null);
 
   const isTimeInDowntime = (time: string) => {
@@ -76,7 +81,18 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
 
     if (!force && taskToCreate.scheduled_time && isTimeInDowntime(taskToCreate.scheduled_time)) {
       setPendingTask(taskToCreate);
-      setShowDowntimeWarning(true);
+      setWarningDialog({
+        open: true,
+        title: "Scheduling During Downtime",
+        description: "This task is scheduled during your downtime. Are you sure you want to schedule it at this time?",
+        onConfirm: () => {
+          if (pendingTask) {
+            handleCreateTask(pendingTask, true);
+            setPendingTask(null);
+          }
+          setWarningDialog(null);
+        },
+      });
       return;
     }
 
@@ -96,10 +112,19 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
           t => t.title === taskToCreate.title && t.scheduled_date === taskToCreate.scheduled_date
         );
         if (duplicateTask) {
-          const confirmed = window.confirm(
-            `You already have a task named "${taskToCreate.title}" on ${taskToCreate.scheduled_date}. Are you sure you want to create another one?`
-          );
-          if (!confirmed) return;
+          return new Promise<void>((resolve) => {
+            setWarningDialog({
+              open: true,
+              title: "Duplicate Task Name",
+              description: `You already have a task named "${taskToCreate.title}" on ${taskToCreate.scheduled_date}. Are you sure you want to create another one?`,
+              onConfirm: () => {
+                setWarningDialog(null);
+                resolve();
+              },
+            });
+          }).then(() => {
+            // Continue with the rest of the validation
+          });
         }
       }
 
@@ -121,33 +146,55 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         });
 
         if (overlappingTask) {
-          toast.error(`This task overlaps with "${overlappingTask.title}". Please choose a different time.`);
+          setWarningDialog({
+            open: true,
+            title: "Task Overlap Detected",
+            description: `This task overlaps with "${overlappingTask.title}". Please choose a different time.`,
+            onConfirm: () => {
+              setWarningDialog(null);
+            },
+          });
           return;
         }
 
-        // Validation: Check for commute window conflicts
+        // Validation: Check for commute window conflicts (including before AND after task)
         const commuteConflict = existingTasks?.find(t => {
-          if (!t.scheduled_date || !t.scheduled_time || (!t.commute_minutes && !taskToCreate.commute_minutes)) return false;
+          if (!t.scheduled_date || !t.scheduled_time) return false;
+          if (!t.commute_minutes && !taskToCreate.commute_minutes) return false;
+          
           const existingStart = new Date(`${t.scheduled_date}T${t.scheduled_time}`);
-          const existingCommuteStart = new Date(existingStart.getTime() - (t.commute_minutes || 0 + 10) * 60000);
           const existingEnd = new Date(existingStart.getTime() + t.duration_minutes * 60000);
-          const existingCommuteEnd = new Date(existingEnd.getTime() + (t.commute_minutes || 0 + 10) * 60000);
+          const existingCommuteStart = new Date(existingStart.getTime() - (t.commute_minutes || 0) * 60000);
+          const existingCommuteEnd = new Date(existingEnd.getTime() + (t.commute_minutes || 0) * 60000);
 
-          const taskCommuteStart = new Date(startTime.getTime() - (taskToCreate.commute_minutes + 10) * 60000);
-          const taskCommuteEnd = new Date(endTime.getTime() + (taskToCreate.commute_minutes + 10) * 60000);
+          const taskCommuteStart = new Date(startTime.getTime() - (taskToCreate.commute_minutes || 0) * 60000);
+          const taskCommuteEnd = new Date(endTime.getTime() + (taskToCreate.commute_minutes || 0) * 60000);
 
           return t.scheduled_date === taskToCreate.scheduled_date && (
             (taskCommuteStart >= existingCommuteStart && taskCommuteStart < existingCommuteEnd) ||
             (taskCommuteEnd > existingCommuteStart && taskCommuteEnd <= existingCommuteEnd) ||
-            (taskCommuteStart <= existingCommuteStart && taskCommuteEnd >= existingCommuteEnd)
+            (taskCommuteStart <= existingCommuteStart && taskCommuteEnd >= existingCommuteEnd) ||
+            (startTime >= existingCommuteStart && startTime < existingCommuteEnd) ||
+            (endTime > existingCommuteStart && endTime <= existingCommuteEnd)
           );
         });
 
         if (commuteConflict) {
-          const confirmed = window.confirm(
-            `This task may conflict with the commute window for "${commuteConflict.title}". Are you sure you want to schedule it at this time?`
-          );
-          if (!confirmed) return;
+          return new Promise<void>((resolve, reject) => {
+            setWarningDialog({
+              open: true,
+              title: "Commute Window Conflict",
+              description: `This task conflicts with the commute window for "${commuteConflict.title}". Commute times extend before and after tasks. Are you sure you want to schedule it at this time?`,
+              onConfirm: () => {
+                setWarningDialog(null);
+                resolve();
+              },
+            });
+          }).then(() => {
+            // Continue with task creation
+          }).catch(() => {
+            return; // User cancelled
+          });
         }
       }
 
@@ -293,18 +340,6 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
     }
   };
 
-  const handleConfirmDowntime = () => {
-    if (pendingTask) {
-      handleCreateTask(pendingTask, true);
-      setPendingTask(null);
-    }
-    setShowDowntimeWarning(false);
-  };
-
-  const handleCancelDowntime = () => {
-    setPendingTask(null);
-    setShowDowntimeWarning(false);
-  };
 
   return (
     <>
@@ -467,20 +502,16 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDowntimeWarning} onOpenChange={setShowDowntimeWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Scheduling During Downtime</AlertDialogTitle>
-            <AlertDialogDescription>
-              This task is scheduled during your downtime. Are you sure you want to schedule it at this time?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDowntime}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDowntime}>Yes, Schedule It</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {warningDialog && (
+        <WarningDialog
+          open={warningDialog.open}
+          onOpenChange={(open) => !open && setWarningDialog(null)}
+          title={warningDialog.title}
+          description={warningDialog.description}
+          onConfirm={warningDialog.onConfirm}
+          onCancel={() => setWarningDialog(null)}
+        />
+      )}
     </>
   );
 }

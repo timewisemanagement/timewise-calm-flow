@@ -178,22 +178,14 @@ const Tasks = () => {
 
             {isLoading ? (
               <div className="text-center py-12">Loading tasks...</div>
-            ) : todayTasks.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <h3 className="text-lg font-semibold mb-2">No tasks for {format(currentDate, 'MMMM d')}</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Create a task and let AI schedule it optimally
-                  </p>
-                  <Button onClick={() => setIsDialogOpen(true)}>Create Task</Button>
-                </CardContent>
-              </Card>
             ) : (
               <TimelineView 
                 tasks={todayTasks}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
                 onEditTask={(task) => toast.info(`Edit feature coming soon for: ${task.title}`)}
+                wakeTime={userProfile?.wake_time}
+                bedTime={userProfile?.bed_time}
               />
             )}
           </TabsContent>
