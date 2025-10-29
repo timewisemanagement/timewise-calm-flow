@@ -4,8 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, subWeeks, subMonths, parseISO, isSameDay } from "date-fns";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  subWeeks,
+  subMonths,
+  parseISO,
+  isSameDay,
+} from "date-fns";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { TrendingUp, CheckCircle2, Clock, Target } from "lucide-react";
 
 interface Task {
@@ -29,7 +51,9 @@ const Analytics = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
     }
@@ -37,13 +61,12 @@ const Analytics = () => {
 
   const fetchTasks = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("user_id", user.id);
+      const { data, error } = await supabase.from("tasks").select("*").eq("user_id", user.id);
 
       if (error) throw error;
       setTasks(data || []);
@@ -57,29 +80,29 @@ const Analytics = () => {
   const getWeeklyStats = () => {
     const weekStart = startOfWeek(new Date());
     const weekEnd = endOfWeek(new Date());
-    const weekTasks = tasks.filter(t => {
+    const weekTasks = tasks.filter((t) => {
       if (!t.scheduled_date) return false;
       const taskDate = parseISO(t.scheduled_date);
       return taskDate >= weekStart && taskDate <= weekEnd;
     });
-    
+
     const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-    const dailyData = weekDays.map(day => {
-      const dayTasks = weekTasks.filter(t => {
+    const dailyData = weekDays.map((day) => {
+      const dayTasks = weekTasks.filter((t) => {
         const taskDate = parseISO(t.scheduled_date!);
         return isSameDay(taskDate, day);
       });
       return {
-        day: format(day, 'EEE'),
-        completed: dayTasks.filter(t => t.status === 'completed').length,
-        pending: dayTasks.filter(t => t.status !== 'completed').length,
+        day: format(day, "EEE"),
+        completed: dayTasks.filter((t) => t.status === "completed").length,
+        pending: dayTasks.filter((t) => t.status !== "completed").length,
       };
     });
 
     return {
       total: weekTasks.length,
-      completed: weekTasks.filter(t => t.status === 'completed').length,
-      timeSpent: weekTasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.duration_minutes, 0),
+      completed: weekTasks.filter((t) => t.status === "completed").length,
+      timeSpent: weekTasks.filter((t) => t.status === "completed").reduce((sum, t) => sum + t.duration_minutes, 0),
       dailyData,
     };
   };
@@ -87,7 +110,7 @@ const Analytics = () => {
   const getMonthlyStats = () => {
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
-    const monthTasks = tasks.filter(t => {
+    const monthTasks = tasks.filter((t) => {
       if (!t.scheduled_date) return false;
       const taskDate = parseISO(t.scheduled_date);
       return taskDate >= monthStart && taskDate <= monthEnd;
@@ -97,47 +120,47 @@ const Analytics = () => {
     for (let i = 3; i >= 0; i--) {
       const weekStart = startOfWeek(subWeeks(new Date(), i));
       const weekEnd = endOfWeek(subWeeks(new Date(), i));
-      const weekTasks = monthTasks.filter(t => {
+      const weekTasks = monthTasks.filter((t) => {
         const taskDate = parseISO(t.scheduled_date!);
         return taskDate >= weekStart && taskDate <= weekEnd;
       });
       weeklyData.push({
-        week: format(weekStart, 'MMM d'),
-        completed: weekTasks.filter(t => t.status === 'completed').length,
-        pending: weekTasks.filter(t => t.status !== 'completed').length,
+        week: format(weekStart, "MMM d"),
+        completed: weekTasks.filter((t) => t.status === "completed").length,
+        pending: weekTasks.filter((t) => t.status !== "completed").length,
       });
     }
 
     return {
       total: monthTasks.length,
-      completed: monthTasks.filter(t => t.status === 'completed').length,
-      timeSpent: monthTasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.duration_minutes, 0),
+      completed: monthTasks.filter((t) => t.status === "completed").length,
+      timeSpent: monthTasks.filter((t) => t.status === "completed").reduce((sum, t) => sum + t.duration_minutes, 0),
       weeklyData,
     };
   };
 
   const getAllTimeStats = () => {
-    const completed = tasks.filter(t => t.status === 'completed').length;
-    const timeSpent = tasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.duration_minutes, 0);
+    const completed = tasks.filter((t) => t.status === "completed").length;
+    const timeSpent = tasks.filter((t) => t.status === "completed").reduce((sum, t) => sum + t.duration_minutes, 0);
 
     const priorityData = [
-      { name: 'High', value: tasks.filter(t => t.priority === 'high').length, color: 'hsl(var(--destructive))' },
-      { name: 'Medium', value: tasks.filter(t => t.priority === 'medium').length, color: 'hsl(var(--warning))' },
-      { name: 'Low', value: tasks.filter(t => t.priority === 'low').length, color: 'hsl(var(--success))' },
+      { name: "High", value: tasks.filter((t) => t.priority === "high").length, color: "hsl(var(--destructive))" },
+      { name: "Medium", value: tasks.filter((t) => t.priority === "medium").length, color: "hsl(var(--warning))" },
+      { name: "Low", value: tasks.filter((t) => t.priority === "low").length, color: "hsl(var(--success))" },
     ];
 
     const monthlyData = [];
     for (let i = 5; i >= 0; i--) {
       const monthStart = startOfMonth(subMonths(new Date(), i));
       const monthEnd = endOfMonth(subMonths(new Date(), i));
-      const monthTasks = tasks.filter(t => {
+      const monthTasks = tasks.filter((t) => {
         if (!t.scheduled_date) return false;
         const taskDate = parseISO(t.scheduled_date);
         return taskDate >= monthStart && taskDate <= monthEnd;
       });
       monthlyData.push({
-        month: format(monthStart, 'MMM'),
-        completed: monthTasks.filter(t => t.status === 'completed').length,
+        month: format(monthStart, "MMM"),
+        completed: monthTasks.filter((t) => t.status === "completed").length,
         total: monthTasks.length,
       });
     }
@@ -160,7 +183,7 @@ const Analytics = () => {
   const allTimeStats = getAllTimeStats();
 
   return (
-    <div className="min-h-screen bg-gradient-hero p-8">
+    <div className="min-h-screen dark p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
           <h1 className="text-4xl font-bold mb-2">Analytics</h1>
