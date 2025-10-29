@@ -116,14 +116,14 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background dark;
+    @apply bg-background text-foreground;
   }
 
   /* Ensure dropdowns have proper background and contrast */
   [role="listbox"],
   [role="menu"],
   .select-content {
-    @apply bg-popover text-popover-foreground;
+    @apply bg-popover dark;
     z-index: 50;
   }
 }
