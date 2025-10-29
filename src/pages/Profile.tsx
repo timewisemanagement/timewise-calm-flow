@@ -6,9 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, User, Clock, Moon, Sun, Coffee } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
 
 interface ProfileData {
   first_name: string;
@@ -20,7 +18,6 @@ interface ProfileData {
   downtime_end: string | null;
   focus_preference: string | null;
   ideal_focus_duration: number;
-  theme: string;
 }
 
 const Profile = () => {
@@ -37,10 +34,7 @@ const Profile = () => {
     downtime_end: null,
     focus_preference: null,
     ideal_focus_duration: 60,
-    theme: "light",
   });
-
-  useTheme(profile.theme);
 
   useEffect(() => {
     checkAuth();
@@ -78,7 +72,6 @@ const Profile = () => {
           downtime_end: data.downtime_end,
           focus_preference: data.focus_preference,
           ideal_focus_duration: data.ideal_focus_duration || 60,
-          theme: data.theme || "light",
         });
       }
     } catch (error: any) {
@@ -106,7 +99,6 @@ const Profile = () => {
           downtime_end: profile.downtime_end,
           focus_preference: profile.focus_preference,
           ideal_focus_duration: profile.ideal_focus_duration,
-          theme: profile.theme,
         })
         .eq("id", user.id);
 
@@ -286,31 +278,6 @@ const Profile = () => {
                   value={profile.ideal_focus_duration}
                   onChange={(e) => setProfile({ ...profile, ideal_focus_duration: parseInt(e.target.value) || 60 })}
                 />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Theme Preferences */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>Customize how the app looks</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="theme">Theme</Label>
-                <Select
-                  value={profile.theme}
-                  onValueChange={(value) => setProfile({ ...profile, theme: value })}
-                >
-                  <SelectTrigger id="theme">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>
