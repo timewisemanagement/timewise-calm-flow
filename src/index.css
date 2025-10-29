@@ -112,11 +112,11 @@ All colors MUST be HSL.
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-dark;
   }
 
   body {
-    @apply bg-background dark;
+    @apply bg-background text-foreground;
   }
 
   /* Ensure dropdowns have proper background and contrast */
