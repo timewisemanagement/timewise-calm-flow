@@ -106,7 +106,7 @@ const Home = () => {
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen grey p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Greeting */}
         <div>

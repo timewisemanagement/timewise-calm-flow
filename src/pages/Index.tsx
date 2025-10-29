@@ -18,7 +18,7 @@ const Index = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen dark">
+    <div className="min-h-screen grey">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 py-20 md:py-32">

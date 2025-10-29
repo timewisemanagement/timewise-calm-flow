@@ -50,7 +50,9 @@ const Schedule = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
     }
@@ -58,20 +60,14 @@ const Schedule = () => {
 
   const fetchTasks = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const [tasksResult, profileResult] = await Promise.all([
-        supabase
-          .from("tasks")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single()
+        supabase.from("tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
       ]);
 
       if (tasksResult.error) throw tasksResult.error;
@@ -99,12 +95,9 @@ const Schedule = () => {
 
   const handleUpdateStatus = async (taskId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ status })
-        .eq("id", taskId);
+      const { error } = await supabase.from("tasks").update({ status }).eq("id", taskId);
       if (error) throw error;
-      if (status === 'completed') {
+      if (status === "completed") {
         toast.success("Task completed! 🎉");
         setCelebrate(true);
         setTimeout(() => setCelebrate(false), 3000);
@@ -119,10 +112,7 @@ const Schedule = () => {
 
   const handleEditTask = async (taskId: string, updates: Partial<Task>) => {
     try {
-      const { error } = await supabase
-        .from("tasks")
-        .update(updates)
-        .eq("id", taskId);
+      const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
       if (error) throw error;
       toast.success("Task updated successfully");
       fetchTasks();
@@ -139,25 +129,27 @@ const Schedule = () => {
   const getTasksForDate = (date: Date) => {
     const dateStart = startOfDay(date);
     const dateEnd = endOfDay(date);
-    
-    return tasks.filter(task => {
-      if (task.scheduled_date) {
-        const taskDate = parseISO(task.scheduled_date);
-        return taskDate >= dateStart && taskDate <= dateEnd;
-      }
-      return false;
-    }).sort((a, b) => {
-      if (!a.scheduled_time || !b.scheduled_time) return 0;
-      return a.scheduled_time.localeCompare(b.scheduled_time);
-    });
+
+    return tasks
+      .filter((task) => {
+        if (task.scheduled_date) {
+          const taskDate = parseISO(task.scheduled_date);
+          return taskDate >= dateStart && taskDate <= dateEnd;
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        if (!a.scheduled_time || !b.scheduled_time) return 0;
+        return a.scheduled_time.localeCompare(b.scheduled_time);
+      });
   };
 
   const todayTasks = getTasksForDate(currentDate);
-  const pendingTasks = todayTasks.filter(t => t.status === 'pending' || t.status === 'scheduled');
-  const completedTasks = todayTasks.filter(t => t.status === 'completed');
+  const pendingTasks = todayTasks.filter((t) => t.status === "pending" || t.status === "scheduled");
+  const completedTasks = todayTasks.filter((t) => t.status === "completed");
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen grey">
       <Celebration trigger={celebrate} />
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -178,7 +170,7 @@ const Schedule = () => {
 
           <TabsContent value="daily" className="space-y-4 mt-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">{format(currentDate, 'EEEE, MMMM d, yyyy')}</h2>
+              <h2 className="text-2xl font-bold">{format(currentDate, "EEEE, MMMM d, yyyy")}</h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCurrentDate(addDays(currentDate, -1))}>
                   <ChevronLeft className="h-4 w-4" />
@@ -195,12 +187,18 @@ const Schedule = () => {
             {isLoading ? (
               <div className="text-center py-12">Loading tasks...</div>
             ) : (
-              <TimelineView 
+              <TimelineView
                 tasks={todayTasks}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
-                onEditTask={(task) => { setSelectedTask(task); setShowEditDialog(true); }}
-                onTaskClick={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
+                onEditTask={(task) => {
+                  setSelectedTask(task);
+                  setShowEditDialog(true);
+                }}
+                onTaskClick={(task) => {
+                  setSelectedTask(task);
+                  setShowDetailsDialog(true);
+                }}
                 wakeTime={userProfile?.wake_time || "08:00"}
                 bedTime={userProfile?.bed_time || "22:00"}
                 downtimeStart={userProfile?.downtime_start}
@@ -217,10 +215,16 @@ const Schedule = () => {
                 tasks={tasks}
                 currentMonth={currentMonth}
                 onMonthChange={setCurrentMonth}
-                onTaskClick={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
+                onTaskClick={(task) => {
+                  setSelectedTask(task);
+                  setShowDetailsDialog(true);
+                }}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
-                onEditTask={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
+                onEditTask={(task) => {
+                  setSelectedTask(task);
+                  setShowDetailsDialog(true);
+                }}
               />
             )}
           </TabsContent>
@@ -232,12 +236,16 @@ const Schedule = () => {
           onTaskCreated={fetchTasks}
           userProfile={userProfile}
         />
-        
+
         <TaskDetailsDialog
           task={selectedTask}
           open={showDetailsDialog}
           onOpenChange={setShowDetailsDialog}
-          onEdit={(task) => { setShowDetailsDialog(false); setSelectedTask(task); setShowEditDialog(true); }}
+          onEdit={(task) => {
+            setShowDetailsDialog(false);
+            setSelectedTask(task);
+            setShowEditDialog(true);
+          }}
           onDelete={handleDeleteTask}
           onUpdateStatus={handleUpdateStatus}
         />
