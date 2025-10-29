@@ -4,7 +4,6 @@ import { useTheme } from '@/hooks/useTheme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState('light');
-  const [colorScheme, setColorScheme] = useState('green');
 
   useEffect(() => {
     // Load theme from profile
@@ -15,13 +14,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('theme, color_scheme')
+          .select('theme')
           .eq('id', user.id)
           .single();
 
         if (profile) {
           setTheme(profile.theme || 'light');
-          setColorScheme(profile.color_scheme || 'green');
         }
       } catch (error) {
         console.error('Error loading theme:', error);
@@ -38,7 +36,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  useTheme(theme, colorScheme);
+  useTheme(theme);
 
   return <>{children}</>;
 }

@@ -21,7 +21,6 @@ interface ProfileData {
   focus_preference: string | null;
   ideal_focus_duration: number;
   theme: string;
-  color_scheme: string;
 }
 
 const Profile = () => {
@@ -39,10 +38,9 @@ const Profile = () => {
     focus_preference: null,
     ideal_focus_duration: 60,
     theme: "light",
-    color_scheme: "green",
   });
 
-  useTheme(profile.theme, profile.color_scheme);
+  useTheme(profile.theme);
 
   useEffect(() => {
     checkAuth();
@@ -81,7 +79,6 @@ const Profile = () => {
           focus_preference: data.focus_preference,
           ideal_focus_duration: data.ideal_focus_duration || 60,
           theme: data.theme || "light",
-          color_scheme: data.color_scheme || "green",
         });
       }
     } catch (error: any) {
@@ -110,7 +107,6 @@ const Profile = () => {
           focus_preference: profile.focus_preference,
           ideal_focus_duration: profile.ideal_focus_duration,
           theme: profile.theme,
-          color_scheme: profile.color_scheme,
         })
         .eq("id", user.id);
 
@@ -313,23 +309,6 @@ const Profile = () => {
                   <SelectContent>
                     <SelectItem value="light">Light</SelectItem>
                     <SelectItem value="dark">Dark</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="color_scheme">Color Scheme</Label>
-                <Select
-                  value={profile.color_scheme}
-                  onValueChange={(value) => setProfile({ ...profile, color_scheme: value })}
-                >
-                  <SelectTrigger id="color_scheme">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="green">Green</SelectItem>
-                    <SelectItem value="blue">Blue</SelectItem>
-                    <SelectItem value="purple">Purple</SelectItem>
-                    <SelectItem value="orange">Orange</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
