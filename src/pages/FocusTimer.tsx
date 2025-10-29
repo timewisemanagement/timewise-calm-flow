@@ -12,7 +12,7 @@ const FocusTimer = () => {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [time, setTime] = useState(25 * 60); // 25 minutes default
-  const [mode, setMode] = useState<'focus' | 'break'>('focus');
+  const [mode, setMode] = useState<"focus" | "break">("focus");
   const [focusTime, setFocusTime] = useState(25);
   const [breakTime, setBreakTime] = useState(5);
 
@@ -37,7 +37,9 @@ const FocusTimer = () => {
   }, [isActive, isPaused, time]);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
     }
@@ -45,13 +47,13 @@ const FocusTimer = () => {
 
   const handleTimerComplete = () => {
     setIsActive(false);
-    if (mode === 'focus') {
+    if (mode === "focus") {
       toast.success("Focus session complete! Time for a break.");
-      setMode('break');
+      setMode("break");
       setTime(breakTime * 60);
     } else {
       toast.success("Break complete! Ready for another focus session?");
-      setMode('focus');
+      setMode("focus");
       setTime(focusTime * 60);
     }
   };
@@ -68,23 +70,23 @@ const FocusTimer = () => {
   const handleReset = () => {
     setIsActive(false);
     setIsPaused(false);
-    setTime(mode === 'focus' ? focusTime * 60 : breakTime * 60);
+    setTime(mode === "focus" ? focusTime * 60 : breakTime * 60);
   };
 
-  const handleModeSwitch = (newMode: 'focus' | 'break') => {
+  const handleModeSwitch = (newMode: "focus" | "break") => {
     setMode(newMode);
     setIsActive(false);
     setIsPaused(false);
-    setTime(newMode === 'focus' ? focusTime * 60 : breakTime * 60);
+    setTime(newMode === "focus" ? focusTime * 60 : breakTime * 60);
   };
 
   const minutes = Math.floor(time / 60);
   const seconds = time % 60;
-  const totalTime = mode === 'focus' ? focusTime * 60 : breakTime * 60;
+  const totalTime = mode === "focus" ? focusTime * 60 : breakTime * 60;
   const progress = ((totalTime - time) / totalTime) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-hero p-8">
+    <div className="min-h-screen grey p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
           <h1 className="text-4xl font-bold mb-2">Focus Timer</h1>
@@ -96,7 +98,7 @@ const FocusTimer = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  {mode === 'focus' ? (
+                  {mode === "focus" ? (
                     <>
                       <Brain className="h-5 w-5 text-primary" />
                       Focus Session
@@ -109,24 +111,22 @@ const FocusTimer = () => {
                   )}
                 </CardTitle>
                 <CardDescription>
-                  {mode === 'focus' 
-                    ? 'Stay focused and eliminate distractions' 
-                    : 'Take a well-deserved break'}
+                  {mode === "focus" ? "Stay focused and eliminate distractions" : "Take a well-deserved break"}
                 </CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant={mode === 'focus' ? 'default' : 'outline'}
+                  variant={mode === "focus" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleModeSwitch('focus')}
+                  onClick={() => handleModeSwitch("focus")}
                   disabled={isActive}
                 >
                   Focus
                 </Button>
                 <Button
-                  variant={mode === 'break' ? 'default' : 'outline'}
+                  variant={mode === "break" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleModeSwitch('break')}
+                  onClick={() => handleModeSwitch("break")}
                   disabled={isActive}
                 >
                   Break
@@ -138,18 +138,14 @@ const FocusTimer = () => {
             {/* Timer Display */}
             <div className="text-center space-y-4">
               <div className="text-8xl font-bold font-mono">
-                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+                {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
               </div>
               <Progress value={progress} className="h-2" />
             </div>
 
             {/* Controls */}
             <div className="flex items-center justify-center gap-4">
-              <Button
-                size="lg"
-                onClick={handleStartPause}
-                className="w-32"
-              >
+              <Button size="lg" onClick={handleStartPause} className="w-32">
                 {!isActive || isPaused ? (
                   <>
                     <Play className="h-5 w-5 mr-2" />
@@ -162,12 +158,7 @@ const FocusTimer = () => {
                   </>
                 )}
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleReset}
-                className="w-32"
-              >
+              <Button size="lg" variant="outline" onClick={handleReset} className="w-32">
                 <RotateCcw className="h-5 w-5 mr-2" />
                 Reset
               </Button>
@@ -187,12 +178,7 @@ const FocusTimer = () => {
                     -5
                   </Button>
                   <div className="flex-1 text-center py-2 border rounded">{focusTime}</div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setFocusTime(focusTime + 5)}
-                    disabled={isActive}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setFocusTime(focusTime + 5)} disabled={isActive}>
                     +5
                   </Button>
                 </div>
@@ -209,12 +195,7 @@ const FocusTimer = () => {
                     -5
                   </Button>
                   <div className="flex-1 text-center py-2 border rounded">{breakTime}</div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBreakTime(breakTime + 5)}
-                    disabled={isActive}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setBreakTime(breakTime + 5)} disabled={isActive}>
                     +5
                   </Button>
                 </div>
