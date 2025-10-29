@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Home", url: "/", icon: Home, color: black },
+  { title: "Home", url: "/", icon: Home },
   { title: "Schedule", url: "/schedule", icon: Calendar },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Focus Timer", url: "/focus", icon: Timer },
