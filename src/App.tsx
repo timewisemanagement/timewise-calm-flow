@@ -30,30 +30,33 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="*" element={
-              <SidebarProvider defaultOpen={false}>
-                <div className="flex min-h-screen w-full">
-                  <AppSidebar />
-                  <div className="flex-1 flex flex-col w-full">
-                    <header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10 flex items-center px-4">
-                      <SidebarTrigger />
-                    </header>
-                    <main className="flex-1">
-                      <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/schedule" element={<Schedule />} />
-                        <Route path="/analytics" element={<Analytics />} />
-                        <Route path="/focus" element={<FocusTimer />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/landing" element={<Index />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </main>
+            <Route
+              path="*"
+              element={
+                <SidebarProvider defaultOpen={false}>
+                  <div className="flex min-h-screen w-full">
+                    <AppSidebar />
+                    <div className="flex-1 flex flex-col w-full">
+                      <header className="h-14 border-b bg-card/50 backdrop-blur-sm bg-gradient-light bg- sticky top-0 z-10 flex items-center px-4">
+                        <SidebarTrigger />
+                      </header>
+                      <main className="flex-1">
+                        <Routes>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/schedule" element={<Schedule />} />
+                          <Route path="/analytics" element={<Analytics />} />
+                          <Route path="/focus" element={<FocusTimer />} />
+                          <Route path="/profile" element={<Profile />} />
+                          <Route path="/landing" element={<Index />} />
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
+                    </div>
                   </div>
-                </div>
-              </SidebarProvider>
-            } />
+                </SidebarProvider>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>
