@@ -18,7 +18,7 @@ const Index = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen dark">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 py-20 md:py-32">
@@ -26,23 +26,17 @@ const Index = () => {
             <div className="inline-block p-4 bg-gradient-primary rounded-2xl shadow-xl mb-4">
               <Clock className="w-16 h-16 text-primary-foreground" />
             </div>
-            
+
             <h1 className="text-5xl md:text-7xl font-bold">
-              <span className="bg-gradient-primary bg-clip-text text-transparent">
-                Timewise
-              </span>
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Timewise</span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
               Smart scheduling that learns from your calendar and suggests the perfect time for every task
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-              <Button
-                size="lg"
-                className="bg-gradient-primary text-lg px-8 py-6"
-                onClick={() => navigate("/auth")}
-              >
+              <Button size="lg" className="bg-gradient-primary text-lg px-8 py-6" onClick={() => navigate("/auth")}>
                 Get Started
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
@@ -53,10 +47,8 @@ const Index = () => {
 
       {/* Features Section */}
       <section className="max-w-7xl mx-auto px-4 py-20">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-          Intelligent Scheduling Made Simple
-        </h2>
-        
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Intelligent Scheduling Made Simple</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="p-8 rounded-2xl bg-card hover:shadow-xl transition-all">
             <div className="p-3 bg-primary/10 rounded-xl w-fit mb-4">
@@ -93,18 +85,11 @@ const Index = () => {
       {/* CTA Section */}
       <section className="max-w-7xl mx-auto px-4 py-20">
         <div className="bg-gradient-primary rounded-3xl p-12 text-center shadow-2xl">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-            Ready to optimize your time?
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">Ready to optimize your time?</h2>
           <p className="text-xl text-primary-foreground/90 mb-8">
             Join Timewise today and let AI handle your scheduling
           </p>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="text-lg px-8 py-6"
-            onClick={() => navigate("/auth")}
-          >
+          <Button size="lg" variant="secondary" className="text-lg px-8 py-6" onClick={() => navigate("/auth")}>
             Start Free
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
