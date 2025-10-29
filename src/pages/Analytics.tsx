@@ -183,7 +183,7 @@ const Analytics = () => {
   const allTimeStats = getAllTimeStats();
 
   return (
-    <div className="min-h-screen dark p-8">
+    <div className="min-h-screen grey p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
           <h1 className="text-4xl font-bold mb-2">Analytics</h1>
