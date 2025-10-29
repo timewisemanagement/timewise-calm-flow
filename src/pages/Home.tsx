@@ -35,7 +35,9 @@ const Home = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
     }
@@ -43,7 +45,9 @@ const Home = () => {
 
   const fetchData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const [tasksResult, profileResult] = await Promise.all([
@@ -53,11 +57,7 @@ const Home = () => {
           .eq("user_id", user.id)
           .order("scheduled_date", { ascending: true })
           .order("scheduled_time", { ascending: true }),
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single()
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
       ]);
 
       if (tasksResult.error) throw tasksResult.error;
@@ -79,7 +79,7 @@ const Home = () => {
     return "Good Evening";
   };
 
-  const todayTasks = tasks.filter(task => {
+  const todayTasks = tasks.filter((task) => {
     if (!task.scheduled_date) return false;
     const taskDate = parseISO(task.scheduled_date);
     return isSameDay(taskDate, new Date());
@@ -90,32 +90,30 @@ const Home = () => {
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   const getTasksForDay = (day: Date) => {
-    return tasks.filter(task => {
+    return tasks.filter((task) => {
       if (!task.scheduled_date) return false;
       const taskDate = parseISO(task.scheduled_date);
       return isSameDay(taskDate, day);
     });
   };
 
-  const completedToday = todayTasks.filter(t => t.status === 'completed').length;
+  const completedToday = todayTasks.filter((t) => t.status === "completed").length;
   const totalToday = todayTasks.length;
   const completionRate = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
 
   const upcomingTasks = tasks
-    .filter(t => t.scheduled_date && new Date(t.scheduled_date) >= startOfDay(new Date()) && t.status !== 'completed')
+    .filter((t) => t.scheduled_date && new Date(t.scheduled_date) >= startOfDay(new Date()) && t.status !== "completed")
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-gradient-hero p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Greeting */}
         <div>
           <h1 className="text-4xl font-bold mb-2">
-            {getGreeting()}, {userProfile?.first_name || 'there'}!
+            {getGreeting()}, {userProfile?.first_name || "there"}!
           </h1>
-          <p className="text-xl text-muted-foreground">
-            {format(new Date(), 'EEEE, MMMM d, yyyy')}
-          </p>
+          <p className="text-xl text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
         </div>
 
         {/* Stats Cards */}
@@ -144,9 +142,15 @@ const Home = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {tasks.filter(t => t.status === 'completed' && t.scheduled_date && 
-                  new Date(t.scheduled_date) >= weekStart && 
-                  new Date(t.scheduled_date) <= weekEnd).length}
+                {
+                  tasks.filter(
+                    (t) =>
+                      t.status === "completed" &&
+                      t.scheduled_date &&
+                      new Date(t.scheduled_date) >= weekStart &&
+                      new Date(t.scheduled_date) <= weekEnd,
+                  ).length
+                }
               </div>
               <p className="text-sm text-muted-foreground">tasks completed</p>
             </CardContent>
@@ -171,7 +175,7 @@ const Home = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Your Week</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/schedule")}>
                 View Full Schedule <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -179,28 +183,26 @@ const Home = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-7 gap-2">
-              {weekDays.map(day => {
+              {weekDays.map((day) => {
                 const dayTasks = getTasksForDay(day);
                 const isToday = isSameDay(day, new Date());
                 return (
-                  <div 
-                    key={day.toISOString()} 
-                    className={`p-3 rounded-lg border ${isToday ? 'border-primary bg-primary/5' : 'border-border'}`}
+                  <div
+                    key={day.toISOString()}
+                    className={`p-3 rounded-lg border ${isToday ? "border-primary bg-primary/5" : "border-border"}`}
                   >
                     <div className="text-center mb-2">
-                      <div className="text-xs text-muted-foreground">{format(day, 'EEE')}</div>
-                      <div className={`text-lg font-semibold ${isToday ? 'text-primary' : ''}`}>
-                        {format(day, 'd')}
-                      </div>
+                      <div className="text-xs text-muted-foreground">{format(day, "EEE")}</div>
+                      <div className={`text-lg font-semibold ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</div>
                     </div>
                     <div className="space-y-1">
-                      {dayTasks.slice(0, 3).map(task => (
-                        <div 
-                          key={task.id} 
+                      {dayTasks.slice(0, 3).map((task) => (
+                        <div
+                          key={task.id}
                           className="text-xs truncate px-1 py-0.5 rounded"
-                          style={{ 
-                            backgroundColor: task.color || '#3b82f6',
-                            color: 'white'
+                          style={{
+                            backgroundColor: task.color || "#3b82f6",
+                            color: "white",
                           }}
                           title={task.title}
                         >
@@ -208,9 +210,7 @@ const Home = () => {
                         </div>
                       ))}
                       {dayTasks.length > 3 && (
-                        <div className="text-xs text-center text-muted-foreground">
-                          +{dayTasks.length - 3}
-                        </div>
+                        <div className="text-xs text-center text-muted-foreground">+{dayTasks.length - 3}</div>
                       )}
                     </div>
                   </div>
@@ -229,7 +229,7 @@ const Home = () => {
                 Today's Tasks
               </CardTitle>
               <CardDescription>
-                {todayTasks.length === 0 ? 'No tasks scheduled' : `${todayTasks.length} tasks today`}
+                {todayTasks.length === 0 ? "No tasks scheduled" : `${todayTasks.length} tasks today`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,34 +237,32 @@ const Home = () => {
                 {todayTasks.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No tasks for today. Enjoy your free time!</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-4"
-                      onClick={() => navigate('/schedule')}
-                    >
+                    <Button variant="outline" className="mt-4" onClick={() => navigate("/schedule")}>
                       Add a Task
                     </Button>
                   </div>
                 ) : (
-                  todayTasks.map(task => (
-                    <div 
+                  todayTasks.map((task) => (
+                    <div
                       key={task.id}
                       className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => navigate('/schedule')}
+                      onClick={() => navigate("/schedule")}
                     >
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
-                        style={{ backgroundColor: task.color || '#3b82f6' }}
+                        style={{ backgroundColor: task.color || "#3b82f6" }}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className={`font-medium ${task.status === 'completed' ? 'line-through opacity-60' : ''}`}>
+                        <div className={`font-medium ${task.status === "completed" ? "line-through opacity-60" : ""}`}>
                           {task.title}
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                           {task.start_time && task.end_time ? (
-                            <span>{task.start_time} - {task.end_time}</span>
-                          ) : task.scheduled_time && (
-                            <span>{task.scheduled_time}</span>
+                            <span>
+                              {task.start_time} - {task.end_time}
+                            </span>
+                          ) : (
+                            task.scheduled_time && <span>{task.scheduled_time}</span>
                           )}
                           <Badge variant="outline" className="text-xs">
                             {task.priority}
@@ -293,7 +291,7 @@ const Home = () => {
               <MiniCalendar
                 tasks={tasks}
                 currentMonth={new Date()}
-                onClick={() => navigate('/schedule?view=calendar')}
+                onClick={() => navigate("/schedule?view=calendar")}
               />
             </CardContent>
           </Card>
