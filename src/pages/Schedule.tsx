@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, ChevronLeft, ChevronRight, User, LogOut } from "lucide-react";
-import TaskCard from "@/components/TaskCard";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { TaskCreationDialog } from "@/components/TaskCreationDialog";
+import { TaskDetailsDialog } from "@/components/TaskDetailsDialog";
 import { CalendarView } from "@/components/CalendarView";
 import { TimelineView } from "@/components/TimelineView";
+import { Celebration } from "@/components/Celebration";
 import { format, startOfDay, endOfDay, addDays, parseISO } from "date-fns";
 
 interface Task {
@@ -23,11 +23,14 @@ interface Task {
   created_at: string;
   scheduled_date: string | null;
   scheduled_time: string | null;
+  start_time: string | null;
+  end_time: string | null;
   commute_minutes?: number;
   recurrence_pattern?: string;
+  color?: string;
 }
 
-const Tasks = () => {
+const Schedule = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -35,6 +38,9 @@ const Tasks = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -96,7 +102,13 @@ const Tasks = () => {
         .update({ status })
         .eq("id", taskId);
       if (error) throw error;
-      toast.success("Task updated");
+      if (status === 'completed') {
+        toast.success("Task completed! 🎉");
+        setCelebrate(true);
+        setTimeout(() => setCelebrate(false), 3000);
+      } else {
+        toast.success("Task updated");
+      }
       fetchTasks();
     } catch (error: any) {
       toast.error(error.message || "Failed to update task");
@@ -130,26 +142,14 @@ const Tasks = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      <Celebration trigger={celebrate} />
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-xl font-bold">My Tasks</h1>
-              <p className="text-sm text-muted-foreground">Manage your tasks and schedule</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              New Task
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => navigate("/profile")}>
-              <User className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold">Schedule</h1>
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-primary">
+            <Plus className="w-4 h-4 mr-2" />
+            New Task
+          </Button>
         </div>
       </header>
 
@@ -183,9 +183,12 @@ const Tasks = () => {
                 tasks={todayTasks}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
-                onEditTask={(task) => toast.info(`Edit feature coming soon for: ${task.title}`)}
+                onEditTask={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
+                onTaskClick={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
                 wakeTime={userProfile?.wake_time}
                 bedTime={userProfile?.bed_time}
+                downtimeStart={userProfile?.downtime_start}
+                downtimeEnd={userProfile?.downtime_end}
               />
             )}
           </TabsContent>
@@ -198,10 +201,10 @@ const Tasks = () => {
                 tasks={tasks}
                 currentMonth={currentMonth}
                 onMonthChange={setCurrentMonth}
-                onTaskClick={(task) => toast.info(`Task: ${task.title}`)}
+                onTaskClick={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
-                onEditTask={(task) => toast.info(`Edit feature coming soon for: ${task.title}`)}
+                onEditTask={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
               />
             )}
           </TabsContent>
@@ -213,9 +216,18 @@ const Tasks = () => {
           onTaskCreated={fetchTasks}
           userProfile={userProfile}
         />
+        
+        <TaskDetailsDialog
+          task={selectedTask}
+          open={showDetailsDialog}
+          onOpenChange={setShowDetailsDialog}
+          onEdit={(task) => toast.info("Edit coming soon")}
+          onDelete={handleDeleteTask}
+          onUpdateStatus={handleUpdateStatus}
+        />
       </main>
     </div>
   );
 };
 
-export default Tasks;
+export default Schedule;

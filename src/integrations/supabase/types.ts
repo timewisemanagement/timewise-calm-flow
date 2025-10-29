@@ -147,10 +147,12 @@ export type Database = {
       }
       tasks: {
         Row: {
+          color: string | null
           commute_minutes: number | null
           created_at: string | null
           description: string | null
           duration_minutes: number
+          end_time: string | null
           id: string
           priority: string | null
           recurrence_days: string[] | null
@@ -159,6 +161,7 @@ export type Database = {
           scheduled_at: string | null
           scheduled_date: string | null
           scheduled_time: string | null
+          start_time: string | null
           status: string | null
           tags: string[] | null
           title: string
@@ -166,10 +169,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          color?: string | null
           commute_minutes?: number | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number
+          end_time?: string | null
           id?: string
           priority?: string | null
           recurrence_days?: string[] | null
@@ -178,6 +183,7 @@ export type Database = {
           scheduled_at?: string | null
           scheduled_date?: string | null
           scheduled_time?: string | null
+          start_time?: string | null
           status?: string | null
           tags?: string[] | null
           title: string
@@ -185,10 +191,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          color?: string | null
           commute_minutes?: number | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number
+          end_time?: string | null
           id?: string
           priority?: string | null
           recurrence_days?: string[] | null
@@ -197,6 +205,7 @@ export type Database = {
           scheduled_at?: string | null
           scheduled_date?: string | null
           scheduled_time?: string | null
+          start_time?: string | null
           status?: string | null
           tags?: string[] | null
           title?: string
