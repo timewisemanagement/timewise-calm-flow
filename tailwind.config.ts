@@ -63,6 +63,7 @@ export default {
         },
       },
       backgroundImage: {
+        "gradient-lighter": "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
         "gradient-light": "linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)",
         "gradient-primary": "var(--gradient-primary)",
         "gradient-hero": "var(--gradient-hero)",
