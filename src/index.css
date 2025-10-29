@@ -42,7 +42,7 @@ All colors MUST be HSL.
     --input: 140 10% 90%;
     --ring: 142 76% 45%;
 
-    --sidebar: 0 0% 100%;
+    --dark: 220 8% 40% --sidebar: 0 0% 100%;
     --sidebar-foreground: 140 5% 10%;
     --sidebar-primary: 142 76% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
