@@ -59,42 +59,51 @@ export type Database = {
       profiles: {
         Row: {
           bed_time: string | null
+          color_scheme: string | null
           created_at: string | null
-          display_name: string | null
           downtime_end: string | null
           downtime_start: string | null
           email: string
+          first_name: string | null
           focus_preference: string | null
           id: string
           ideal_focus_duration: number | null
+          last_name: string | null
+          theme: string | null
           timezone: string | null
           updated_at: string | null
           wake_time: string | null
         }
         Insert: {
           bed_time?: string | null
+          color_scheme?: string | null
           created_at?: string | null
-          display_name?: string | null
           downtime_end?: string | null
           downtime_start?: string | null
           email: string
+          first_name?: string | null
           focus_preference?: string | null
           id: string
           ideal_focus_duration?: number | null
+          last_name?: string | null
+          theme?: string | null
           timezone?: string | null
           updated_at?: string | null
           wake_time?: string | null
         }
         Update: {
           bed_time?: string | null
+          color_scheme?: string | null
           created_at?: string | null
-          display_name?: string | null
           downtime_end?: string | null
           downtime_start?: string | null
           email?: string
+          first_name?: string | null
           focus_preference?: string | null
           id?: string
           ideal_focus_duration?: number | null
+          last_name?: string | null
+          theme?: string | null
           timezone?: string | null
           updated_at?: string | null
           wake_time?: string | null

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { TaskCreationDialog } from "@/components/TaskCreationDialog";
 import { TaskDetailsDialog } from "@/components/TaskDetailsDialog";
+import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { CalendarView } from "@/components/CalendarView";
 import { TimelineView } from "@/components/TimelineView";
 import { Celebration } from "@/components/Celebration";
@@ -40,6 +41,7 @@ const Schedule = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
@@ -115,6 +117,20 @@ const Schedule = () => {
     }
   };
 
+  const handleEditTask = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update(updates)
+        .eq("id", taskId);
+      if (error) throw error;
+      toast.success("Task updated successfully");
+      fetchTasks();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update task");
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -183,10 +199,10 @@ const Schedule = () => {
                 tasks={todayTasks}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
-                onEditTask={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
+                onEditTask={(task) => { setSelectedTask(task); setShowEditDialog(true); }}
                 onTaskClick={(task) => { setSelectedTask(task); setShowDetailsDialog(true); }}
-                wakeTime={userProfile?.wake_time}
-                bedTime={userProfile?.bed_time}
+                wakeTime={userProfile?.wake_time || "08:00"}
+                bedTime={userProfile?.bed_time || "22:00"}
                 downtimeStart={userProfile?.downtime_start}
                 downtimeEnd={userProfile?.downtime_end}
               />
@@ -221,9 +237,16 @@ const Schedule = () => {
           task={selectedTask}
           open={showDetailsDialog}
           onOpenChange={setShowDetailsDialog}
-          onEdit={(task) => toast.info("Edit coming soon")}
+          onEdit={(task) => { setShowDetailsDialog(false); setSelectedTask(task); setShowEditDialog(true); }}
           onDelete={handleDeleteTask}
           onUpdateStatus={handleUpdateStatus}
+        />
+
+        <TaskEditDialog
+          task={selectedTask}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          onSave={handleEditTask}
         />
       </main>
     </div>

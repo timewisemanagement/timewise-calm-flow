@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Home from "./pages/Home";
 import Index from "./pages/Index";
@@ -28,21 +28,26 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="*" element={
-            <SidebarProvider>
+            <SidebarProvider defaultOpen={false}>
               <div className="flex min-h-screen w-full">
                 <AppSidebar />
-                <main className="flex-1">
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/schedule" element={<Schedule />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/focus" element={<FocusTimer />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/landing" element={<Index />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
+                <div className="flex-1 flex flex-col w-full">
+                  <header className="h-14 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10 flex items-center px-4">
+                    <SidebarTrigger />
+                  </header>
+                  <main className="flex-1">
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/schedule" element={<Schedule />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/focus" element={<FocusTimer />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/landing" element={<Index />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </main>
+                </div>
               </div>
             </SidebarProvider>
           } />

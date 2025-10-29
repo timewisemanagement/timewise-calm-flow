@@ -39,26 +39,28 @@ interface TimelineViewProps {
 export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, onTaskClick, wakeTime = "08:00", bedTime = "22:00", downtimeStart, downtimeEnd }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // Generate hours from 12am to 11pm (0-23)
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+  // Generate hours starting from wake time
+  const [wakeHour] = wakeTime.split(':').map(Number);
+  const hours = Array.from({ length: 24 }, (_, i) => (wakeHour + i) % 24);
   
-  // Scroll to wake time on mount
+  // Scroll to top (which is now wake time) on mount
   useEffect(() => {
-    if (scrollRef.current && wakeTime) {
-      const [wakeHour] = wakeTime.split(':').map(Number);
-      const hourHeight = 80;
-      scrollRef.current.scrollTop = wakeHour * hourHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
     }
-  }, [wakeTime]);
+  }, []);
 
   const isSleepHour = (hour: number) => {
-    const [bedHour] = bedTime.split(':').map(Number);
-    const [wakeHour] = wakeTime.split(':').map(Number);
+    const [bedHour, bedMinute] = bedTime.split(':').map(Number);
+    const [wakeHour, wakeMinute] = wakeTime.split(':').map(Number);
     
+    // Sleep hours are from bedTime to wakeTime
     if (bedHour < wakeHour) {
+      // Sleep spans across midnight (e.g., 9pm to 6am)
       return hour >= bedHour || hour < wakeHour;
     } else {
-      return hour >= bedHour && hour < wakeHour;
+      // Sleep doesn't span midnight (e.g., 1am to 8am)
+      return hour >= bedHour || hour < wakeHour;
     }
   };
 

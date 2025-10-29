@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MiniCalendar } from "@/components/MiniCalendar";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Calendar, Clock, ChevronRight, TrendingUp, Target, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -110,7 +111,7 @@ const Home = () => {
         {/* Greeting */}
         <div>
           <h1 className="text-4xl font-bold mb-2">
-            {getGreeting()}, {userProfile?.display_name || 'there'}!
+            {getGreeting()}, {userProfile?.first_name || 'there'}!
           </h1>
           <p className="text-xl text-muted-foreground">
             {format(new Date(), 'EEEE, MMMM d, yyyy')}
@@ -196,10 +197,15 @@ const Home = () => {
                       {dayTasks.slice(0, 3).map(task => (
                         <div 
                           key={task.id} 
-                          className="w-full h-2 rounded-full"
-                          style={{ backgroundColor: task.color || '#3b82f6' }}
+                          className="text-xs truncate px-1 py-0.5 rounded"
+                          style={{ 
+                            backgroundColor: task.color || '#3b82f6',
+                            color: 'white'
+                          }}
                           title={task.title}
-                        />
+                        >
+                          {task.title}
+                        </div>
                       ))}
                       {dayTasks.length > 3 && (
                         <div className="text-xs text-center text-muted-foreground">
@@ -280,22 +286,15 @@ const Home = () => {
                   <Calendar className="h-5 w-5" />
                   Calendar
                 </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
-                  Open Calendar <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
               </div>
-              <CardDescription>Quick view of your month</CardDescription>
+              <CardDescription>Click to view full calendar</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Calendar className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">
-                  View your full calendar with all scheduled tasks
-                </p>
-                <Button onClick={() => navigate('/schedule')}>
-                  Go to Calendar
-                </Button>
-              </div>
+              <MiniCalendar
+                tasks={tasks}
+                currentMonth={new Date()}
+                onClick={() => navigate('/schedule?view=calendar')}
+              />
             </CardContent>
           </Card>
         </div>

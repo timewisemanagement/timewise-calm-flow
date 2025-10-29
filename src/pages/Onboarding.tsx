@@ -20,6 +20,8 @@ const Onboarding = () => {
   const [hasDowntime, setHasDowntime] = useState(false);
   const [downtimeStart, setDowntimeStart] = useState('12:00');
   const [downtimeEnd, setDowntimeEnd] = useState('13:00');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const handleComplete = async () => {
     setIsLoading(true);
@@ -34,6 +36,8 @@ const Onboarding = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
+          first_name: firstName,
+          last_name: lastName,
           focus_preference: focusPreference,
           ideal_focus_duration: idealFocusDuration[0],
           wake_time: wakeTime,
@@ -64,6 +68,23 @@ const Onboarding = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+          {/* Name Fields */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">What's your name?</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+              <Input
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+          </div>
+
           {/* Focus Preference */}
           <div className="space-y-4">
             <Label className="text-lg font-semibold">When do you focus best?</Label>

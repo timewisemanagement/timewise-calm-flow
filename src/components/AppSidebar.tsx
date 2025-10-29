@@ -1,4 +1,4 @@
-import { Home, Calendar, BarChart3, Timer, Settings, LogOut } from "lucide-react";
+import { Home, Calendar, BarChart3, Timer, Settings, LogOut, Menu } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -39,7 +39,10 @@ export function AppSidebar() {
     isActive ? "bg-accent text-accent-foreground font-medium" : "hover:bg-accent/50";
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
+    <Sidebar
+      className={collapsed ? "w-16" : "w-60"}
+      collapsible="icon"
+    >
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className={collapsed ? "hidden" : ""}>Navigation</SidebarGroupLabel>
