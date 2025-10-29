@@ -113,7 +113,7 @@ const Home = () => {
           <h1 className="text-4xl font-bold mb-2">
             {getGreeting()}, {userProfile?.first_name || 'there'}!
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-foreground">
             {format(new Date(), 'EEEE, MMMM d, yyyy')}
           </p>
         </div>
