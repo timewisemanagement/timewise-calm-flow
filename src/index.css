@@ -124,7 +124,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background dark;
+    @apply bg-background text-foreground;
   }
 
   /* Ensure dropdowns have proper background and contrast */
