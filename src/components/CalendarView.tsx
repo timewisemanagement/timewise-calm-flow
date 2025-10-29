@@ -13,11 +13,19 @@ import {
 interface Task {
   id: string;
   title: string;
+  description: string | null;
+  duration_minutes: number;
+  priority: string;
+  tags: string[];
+  status: string;
+  created_at: string;
   scheduled_date: string | null;
   scheduled_time: string | null;
-  priority: string;
-  status: string;
+  start_time: string | null;
+  end_time: string | null;
+  commute_minutes?: number;
   recurrence_pattern?: string;
+  color?: string;
 }
 
 interface CalendarViewProps {

@@ -12,14 +12,13 @@ interface Task {
   priority: string;
   tags: string[];
   status: string;
+  created_at: string;
   scheduled_date: string | null;
   scheduled_time: string | null;
   start_time: string | null;
   end_time: string | null;
   commute_minutes?: number;
   recurrence_pattern?: string;
-  recurrence_days?: string[];
-  recurrence_end_date?: string | null;
   color?: string;
 }
 
@@ -105,16 +104,6 @@ export function TaskDetailsDialog({ task, open, onOpenChange, onEdit, onDelete, 
               <div>
                 <p className="font-medium mb-1">Recurrence</p>
                 <p className="text-muted-foreground capitalize">{task.recurrence_pattern}</p>
-                {task.recurrence_days && task.recurrence_days.length > 0 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    On: {task.recurrence_days.join(', ')}
-                  </p>
-                )}
-                {task.recurrence_end_date && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Until: {format(new Date(task.recurrence_end_date + 'T00:00:00'), 'MMM d, yyyy')}
-                  </p>
-                )}
               </div>
             </div>
           )}

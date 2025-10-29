@@ -12,11 +12,15 @@ interface Task {
   description: string | null;
   duration_minutes: number;
   priority: string;
+  tags: string[];
+  status: string;
+  created_at: string;
+  scheduled_date: string | null;
   scheduled_time: string | null;
   start_time: string | null;
   end_time: string | null;
   commute_minutes?: number;
-  status: string;
+  recurrence_pattern?: string;
   color?: string;
 }
 
