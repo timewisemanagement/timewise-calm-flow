@@ -42,7 +42,7 @@ All colors MUST be HSL.
     --input: 140 10% 90%;
     --ring: 142 76% 45%;
 
-    --dark: 220 8% 40% --sidebar: 0 0% 100%;
+    --sidebar: 0 0% 100%;
     --sidebar-foreground: 140 5% 10%;
     --sidebar-primary: 142 76% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -65,7 +65,7 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 0 0% 10%;
+    --background: 0 0% 18%;
     --foreground: 0 0% 98%;
 
     --card: 0 0% 14%;
@@ -77,7 +77,7 @@ All colors MUST be HSL.
     --primary: 142 45% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --dark: 220 8% 40% --secondary: 0 0% 18%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 18%;
@@ -86,7 +86,7 @@ All colors MUST be HSL.
     --accent: 142 40% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 210 10% 35%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 142 76% 55%;
@@ -95,7 +95,7 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 210 10% 35%;
+    --border: 0 0% 22%;
     --input: 0 0% 22%;
     --ring: 142 76% 55%;
 
