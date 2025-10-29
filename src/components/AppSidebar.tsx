@@ -15,15 +15,13 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Home", url: "/", icon: Home, color: 'black' },
+  { title: "Home", url: "/", icon: Home },
   { title: "Schedule", url: "/schedule", icon: Calendar },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Focus Timer", url: "/focus", icon: Timer },
 ];
 
-const settingsItems = [
-  { title: "Settings", url: "/profile", icon: Settings },
-];
+const settingsItems = [{ title: "Settings", url: "/profile", icon: Settings }];
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -36,15 +34,12 @@ export function AppSidebar() {
   };
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
-    isActive 
-      ? "bg-accent text-accent-foreground font-medium" 
+    isActive
+      ? "bg-accent text-accent-foreground font-medium"
       : "text-foreground hover:bg-accent/50 hover:text-accent-foreground";
 
   return (
-    <Sidebar
-      className={collapsed ? "w-16" : "w-60"}
-      collapsible="icon"
-    >
+    <Sidebar className={collapsed ? "w-16" : "w-60"} collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className={collapsed ? "hidden" : ""}>Navigation</SidebarGroupLabel>
