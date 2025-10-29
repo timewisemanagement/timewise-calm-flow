@@ -112,7 +112,7 @@ All colors MUST be HSL.
 
 @layer base {
   * {
-    @apply border-dark;
+    @apply border-border;
   }
 
   body {
@@ -123,7 +123,7 @@ All colors MUST be HSL.
   [role="listbox"],
   [role="menu"],
   .select-content {
-    @apply bg-popover text-popover-foreground;
+    @apply bg-popover dark;
     z-index: 50;
   }
 }
