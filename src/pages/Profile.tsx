@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, User, Clock, Moon, Sun, Coffee } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 
 interface ProfileData {
   first_name: string;
@@ -40,6 +41,8 @@ const Profile = () => {
     theme: "light",
     color_scheme: "green",
   });
+
+  useTheme(profile.theme, profile.color_scheme);
 
   useEffect(() => {
     checkAuth();
