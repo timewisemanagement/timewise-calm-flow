@@ -201,10 +201,11 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       // Determine if AI should be triggered
       const hasSpecificDateTime = taskToCreate.scheduled_date && taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
       const hasOnlyDate = taskToCreate.scheduled_date && !taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
+      const hasNoScheduling = !taskToCreate.scheduled_date && !taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
       const isRecurringWithTime = (taskToCreate.recurrence_pattern === 'daily' || taskToCreate.recurrence_pattern === 'weekly') && taskToCreate.scheduled_time;
       const isRecurringWithoutTime = (taskToCreate.recurrence_pattern === 'daily' || taskToCreate.recurrence_pattern === 'weekly') && !taskToCreate.scheduled_time;
       
-      const shouldTriggerAI = hasOnlyDate || isRecurringWithoutTime;
+      const shouldTriggerAI = hasOnlyDate || hasNoScheduling || isRecurringWithoutTime;
 
       // Handle recurring tasks with specific time - create multiple instances
       if (isRecurringWithTime) {
