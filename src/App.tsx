@@ -34,10 +34,10 @@ const App = () => (
               path="*"
               element={
                 <SidebarProvider defaultOpen={false}>
-                  <div className="flex min-h-screen w-full">
+                  <div className="flex min-h-screen w-full overflow-hidden">
                     <AppSidebar />
-                    <div className="flex-1 flex flex-col w-full">
-                      <header className="h-14 border-b bg-card/50 backdrop-blur-sm bg-gradient-light bg- sticky top-0 z-10 flex items-center px-4">
+                    <div className="flex-1 flex flex-col w-full min-h-screen">
+                      <header className="h-14 border-b bg-card/50 backdrop-blur-sm bg-gradient-light sticky top-0 z-10 flex items-center px-4 shrink-0">
                         <SidebarTrigger />
                       </header>
                       <main className="flex-1">
