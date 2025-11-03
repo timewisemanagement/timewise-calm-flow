@@ -229,7 +229,7 @@ Re-evaluate the schedule, resolve all conflicts, and return suggestions for opti
       for (const suggestion of suggestions) {
         const suggestedStart = new Date(suggestion.suggested_start);
         const scheduledDate = suggestedStart.toISOString().split('T')[0];
-        const scheduledTime = suggestedStart.toISOString().split('T')[1].substring(0, 5);
+        const scheduledTime = suggestedStart.toISOString().split('T')[1].substring(0, 8); // Include seconds (HH:MM:SS)
 
         await supabase
           .from('tasks')
