@@ -20,6 +20,20 @@ interface DeletedTask {
   deleted_at: string;
   scheduled_date: string | null;
   priority: string;
+  recurrence_group_id: string | null;
+  recurrence_pattern: string | null;
+}
+
+interface GroupedDeletedTask {
+  id: string; // Will be the recurrence_group_id or the single task id
+  title: string;
+  description: string | null;
+  deleted_at: string;
+  scheduled_date: string | null;
+  priority: string;
+  taskCount: number;
+  taskIds: string[]; // All task IDs in this group
+  isRecurring: boolean;
 }
 
 interface DeletedTasksDialogProps {
@@ -34,6 +48,7 @@ export function DeletedTasksDialog({
   onTaskRestored,
 }: DeletedTasksDialogProps) {
   const [deletedTasks, setDeletedTasks] = useState<DeletedTask[]>([]);
+  const [groupedTasks, setGroupedTasks] = useState<GroupedDeletedTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -52,13 +67,17 @@ export function DeletedTasksDialog({
 
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, description, deleted_at, scheduled_date, priority")
+        .select("id, title, description, deleted_at, scheduled_date, priority, recurrence_group_id, recurrence_pattern")
         .eq("user_id", user.id)
         .not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false });
 
       if (error) throw error;
       setDeletedTasks(data || []);
+      
+      // Group tasks by recurrence_group_id
+      const grouped = groupDeletedTasks(data || []);
+      setGroupedTasks(grouped);
     } catch (error: any) {
       toast.error("Failed to fetch deleted tasks");
       console.error(error);
@@ -67,15 +86,46 @@ export function DeletedTasksDialog({
     }
   };
 
-  const handleRestore = async (taskId: string) => {
+  const groupDeletedTasks = (tasks: DeletedTask[]): GroupedDeletedTask[] => {
+    const groupMap = new Map<string, GroupedDeletedTask>();
+    
+    tasks.forEach(task => {
+      // Use recurrence_group_id if it exists, otherwise use task id
+      const groupKey = task.recurrence_group_id || task.id;
+      
+      if (groupMap.has(groupKey)) {
+        // Add to existing group
+        const group = groupMap.get(groupKey)!;
+        group.taskCount++;
+        group.taskIds.push(task.id);
+      } else {
+        // Create new group
+        groupMap.set(groupKey, {
+          id: groupKey,
+          title: task.title,
+          description: task.description,
+          deleted_at: task.deleted_at,
+          scheduled_date: task.scheduled_date,
+          priority: task.priority,
+          taskCount: 1,
+          taskIds: [task.id],
+          isRecurring: !!task.recurrence_group_id,
+        });
+      }
+    });
+    
+    return Array.from(groupMap.values());
+  };
+
+  const handleRestore = async (taskIds: string[]) => {
     try {
       const { error } = await supabase
         .from("tasks")
         .update({ deleted_at: null })
-        .eq("id", taskId);
+        .in("id", taskIds);
 
       if (error) throw error;
-      toast.success("Task restored successfully");
+      toast.success(taskIds.length > 1 ? `Restored ${taskIds.length} tasks` : "Task restored successfully");
       fetchDeletedTasks();
       onTaskRestored();
     } catch (error: any) {
@@ -84,14 +134,18 @@ export function DeletedTasksDialog({
     }
   };
 
-  const handlePermanentDelete = async (taskId: string) => {
-    if (!confirm("Are you sure? This cannot be undone.")) return;
+  const handlePermanentDelete = async (taskIds: string[]) => {
+    const message = taskIds.length > 1 
+      ? `Are you sure you want to permanently delete ${taskIds.length} tasks? This cannot be undone.`
+      : "Are you sure? This cannot be undone.";
+    
+    if (!confirm(message)) return;
 
     try {
-      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+      const { error } = await supabase.from("tasks").delete().in("id", taskIds);
 
       if (error) throw error;
-      toast.success("Task permanently deleted");
+      toast.success(taskIds.length > 1 ? `${taskIds.length} tasks permanently deleted` : "Task permanently deleted");
       fetchDeletedTasks();
     } catch (error: any) {
       toast.error("Failed to delete task");
@@ -132,7 +186,7 @@ export function DeletedTasksDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {deletedTasks.length > 0 && (
+          {groupedTasks.length > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -146,35 +200,45 @@ export function DeletedTasksDialog({
           <ScrollArea className="h-[400px] pr-4">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : deletedTasks.length === 0 ? (
+            ) : groupedTasks.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No deleted tasks found
               </div>
             ) : (
               <div className="space-y-3">
-                {deletedTasks.map((task) => (
+                {groupedTasks.map((group) => (
                   <div
-                    key={task.id}
+                    key={group.id}
                     className="border rounded-lg p-4 bg-card hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{task.title}</h3>
-                        {task.description && (
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-sm truncate">{group.title}</h3>
+                          {group.isRecurring && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                              {group.taskCount} tasks
+                            </span>
+                          )}
+                        </div>
+                        {group.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                            {task.description}
+                            {group.description}
                           </p>
                         )}
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span className="capitalize">{task.priority} priority</span>
-                          {task.scheduled_date && (
-                            <span>Scheduled: {format(new Date(task.scheduled_date), "MMM d, yyyy")}</span>
+                          <span className="capitalize">{group.priority} priority</span>
+                          {group.isRecurring && (
+                            <span>Recurring sequence</span>
+                          )}
+                          {group.scheduled_date && !group.isRecurring && (
+                            <span>Scheduled: {format(new Date(group.scheduled_date), "MMM d, yyyy")}</span>
                           )}
                           <span>
-                            Deleted: {format(new Date(task.deleted_at), "MMM d, yyyy")}
+                            Deleted: {format(new Date(group.deleted_at), "MMM d, yyyy")}
                           </span>
                           <span className="text-destructive">
-                            Purges in {getDaysUntilPurge(task.deleted_at)} days
+                            Purges in {getDaysUntilPurge(group.deleted_at)} days
                           </span>
                         </div>
                       </div>
@@ -182,16 +246,16 @@ export function DeletedTasksDialog({
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleRestore(task.id)}
-                          title="Restore task"
+                          onClick={() => handleRestore(group.taskIds)}
+                          title={group.isRecurring ? `Restore all ${group.taskCount} tasks` : "Restore task"}
                         >
                           <Undo2 className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handlePermanentDelete(task.id)}
-                          title="Permanently delete"
+                          onClick={() => handlePermanentDelete(group.taskIds)}
+                          title={group.isRecurring ? `Permanently delete all ${group.taskCount} tasks` : "Permanently delete"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
