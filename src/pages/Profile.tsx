@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, User, Clock, Moon, Sun, Coffee } from "lucide-react";
+import { ArrowLeft, User, Clock, Moon, Sun, Coffee, Trash2 } from "lucide-react";
+import { DeletedTasksDialog } from "@/components/DeletedTasksDialog";
 
 interface ProfileData {
   first_name: string;
@@ -24,6 +25,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeletedTasks, setShowDeletedTasks] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     first_name: "",
     last_name: "",
@@ -282,11 +284,33 @@ const Profile = () => {
             </CardContent>
           </Card>
 
+          {/* Task History */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Task History
+              </CardTitle>
+              <CardDescription>View and restore deleted tasks (auto-purged after 30 days)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => setShowDeletedTasks(true)} variant="outline" className="w-full">
+                View Deleted Tasks
+              </Button>
+            </CardContent>
+          </Card>
+
           <Button onClick={handleSave} disabled={isSaving} className="w-full">
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </main>
+
+      <DeletedTasksDialog
+        open={showDeletedTasks}
+        onOpenChange={setShowDeletedTasks}
+        onTaskRestored={fetchProfile}
+      />
     </div>
   );
 };

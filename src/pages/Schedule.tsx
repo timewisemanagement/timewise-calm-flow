@@ -32,6 +32,7 @@ interface Task {
   recurrence_days?: string[];
   recurrence_end_date?: string | null;
   recurrence_group_id?: string | null;
+  deleted_at?: string | null;
   color?: string;
 }
 
@@ -72,7 +73,7 @@ const Schedule = () => {
       if (!user) return;
 
       const [tasksResult, profileResult] = await Promise.all([
-        supabase.from("tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("tasks").select("*").eq("user_id", user.id).is("deleted_at", null).order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").eq("id", user.id).single(),
       ]);
 
@@ -112,9 +113,13 @@ const Schedule = () => {
 
   const deleteSingleTask = async (taskId: string) => {
     try {
-      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+      // Soft delete: set deleted_at timestamp instead of actually deleting
+      const { error } = await supabase
+        .from("tasks")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", taskId);
       if (error) throw error;
-      toast.success("Task deleted");
+      toast.success("Task deleted (can be restored from Profile)");
       fetchTasks();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete task");
@@ -130,16 +135,16 @@ const Schedule = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Delete all tasks with the same recurrence_group_id
+      // Soft delete all tasks with the same recurrence_group_id
       if (taskToDelete.recurrence_group_id) {
         const { error } = await supabase
           .from("tasks")
-          .delete()
+          .update({ deleted_at: new Date().toISOString() })
           .eq("user_id", user.id)
           .eq("recurrence_group_id", taskToDelete.recurrence_group_id);
 
         if (error) throw error;
-        toast.success("All recurring tasks deleted");
+        toast.success("All recurring tasks deleted (can be restored from Profile)");
       } else {
         toast.error("Cannot delete recurring tasks: No recurrence group found");
       }

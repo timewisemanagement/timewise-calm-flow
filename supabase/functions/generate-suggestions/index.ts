@@ -63,11 +63,12 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    // Fetch ALL tasks
+    // Fetch ALL non-deleted tasks
     const { data: allTasks } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', user.id)
+      .is('deleted_at', null)  // Only fetch non-deleted tasks
       .in('status', ['pending', 'scheduled'])
       .order('priority', { ascending: false });
 

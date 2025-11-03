@@ -1,1 +1,7 @@
 project_id = "yvalikcxmtegqsiymfkn"
+
+[functions.generate-suggestions]
+verify_jwt = true
+
+[functions.purge-old-tasks]
+verify_jwt = false

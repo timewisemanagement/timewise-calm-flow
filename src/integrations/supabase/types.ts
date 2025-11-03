@@ -159,6 +159,7 @@ export type Database = {
           color: string | null
           commute_minutes: number | null
           created_at: string | null
+          deleted_at: string | null
           description: string | null
           duration_minutes: number
           end_time: string | null
@@ -182,6 +183,7 @@ export type Database = {
           color?: string | null
           commute_minutes?: number | null
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           duration_minutes?: number
           end_time?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           color?: string | null
           commute_minutes?: number | null
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           duration_minutes?: number
           end_time?: string | null
@@ -231,7 +234,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      purge_old_deleted_tasks: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
