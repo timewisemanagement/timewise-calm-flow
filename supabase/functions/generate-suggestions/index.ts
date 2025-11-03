@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    // Fetch ALL tasks (including scheduled ones) for re-evaluation
+    // Fetch ALL tasks
     const { data: allTasks } = await supabase
       .from('tasks')
       .select('*')
@@ -78,9 +78,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Separate tasks: unscheduled (AI needs to place) vs scheduled (user/AI placed, check for conflicts)
+    // Only schedule tasks that are missing date OR time (unscheduled tasks)
     const unscheduledTasks = allTasks.filter(t => !t.scheduled_date || !t.scheduled_time);
+    
+    // Tasks with both date AND time are already scheduled - treat as conflicts to avoid
     const scheduledTasks = allTasks.filter(t => t.scheduled_date && t.scheduled_time);
+
+    // If there are no unscheduled tasks, nothing to do
+    if (unscheduledTasks.length === 0) {
+      return new Response(
+        JSON.stringify({ message: 'No unscheduled tasks to place', suggestions: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Fetch calendar events for next 7 days
     const now = new Date();
@@ -121,54 +131,50 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a smart scheduling assistant that prevents conflicts and optimizes schedules.
+            content: `You are a smart scheduling assistant that finds optimal time slots for unscheduled tasks.
 
 CRITICAL RULES:
-1. NO OVERLAPS: Tasks cannot overlap. Check scheduled_time and duration_minutes for conflicts.
-2. BUFFER TIME: Leave at least 10 minutes between all tasks.
-3. COMMUTE TIME: For tasks with commute_minutes > 0, add (commute_minutes + 10) BEFORE and AFTER the task.
-4. WAKE/SLEEP: User wakes at ${context.profile.wake_time || '08:00:00'}, sleeps at ${context.profile.bed_time || '22:00:00'}. Never schedule outside this window.
-${context.profile.downtime_start && context.profile.downtime_end ? `5. DOWNTIME: User has downtime ${context.profile.downtime_start} to ${context.profile.downtime_end}. Avoid unless necessary.` : ''}
+1. NEVER MOVE SCHEDULED TASKS: Tasks with scheduled_date and scheduled_time are FIXED. You cannot move them.
+2. NO OVERLAPS: New tasks cannot overlap with scheduled tasks or calendar events.
+3. BUFFER TIME: Leave at least 10 minutes between all tasks.
+4. COMMUTE TIME: For tasks with commute_minutes > 0, reserve (commute_minutes) time BEFORE and AFTER the task duration.
+5. WAKE/SLEEP: User wakes at ${context.profile.wake_time || '08:00:00'}, sleeps at ${context.profile.bed_time || '22:00:00'}. Never schedule outside this window.
+${context.profile.downtime_start && context.profile.downtime_end ? `6. DOWNTIME: User has downtime ${context.profile.downtime_start} to ${context.profile.downtime_end}. Avoid scheduling during this time unless absolutely necessary.` : ''}
 
-CONFLICT RESOLUTION:
-- If a day is too full, move lower priority tasks to the next available day
-- Respect user-scheduled tasks but resolve conflicts by moving other tasks
-- Always find a valid time slot with no overlaps
+YOUR TASK:
+- Schedule ONLY the unscheduled tasks (those without both date and time)
+- Work AROUND existing scheduled tasks and calendar events - DO NOT move them
+- Find the best available time slots that avoid all conflicts
+- If you cannot fit a task without conflicts, schedule it on the next available day
 
 PREFERENCES:
 - Focus preference: ${context.profile.focus_preference}
 - Ideal focus duration: ${context.profile.ideal_focus_duration} minutes
-- Avoid calendar events
-- Prioritize high-priority tasks
+- Prioritize high-priority tasks for better time slots
 - Current time: ${context.currentTime}
 
-INPUT:
-- Unscheduled tasks: Need time slots assigned
-- Scheduled tasks: Already have times, but check for conflicts
-- Calendar events: External events to avoid
-
-OUTPUT JSON (return ONLY the JSON array):
+OUTPUT JSON (return ONLY the JSON array for UNSCHEDULED tasks):
 [
   {
     "task_id": "uuid",
     "suggested_start": "2025-10-22T09:00:00Z",
     "duration_minutes": 60,
     "score": 0.95,
-    "reasoning": "No conflicts, morning preference"
+    "reasoning": "No conflicts with scheduled tasks, fits user's morning preference"
   }
 ]
 
-Return suggestions for ALL tasks (unscheduled + any scheduled tasks that need to move due to conflicts).`
+Return suggestions ONLY for unscheduled tasks. DO NOT include scheduled tasks in your output.`
           },
           {
             role: 'user',
-            content: `Unscheduled Tasks (need placement): ${JSON.stringify(context.unscheduledTasks)}
+            content: `Unscheduled Tasks (find time slots for these): ${JSON.stringify(context.unscheduledTasks)}
 
-Scheduled Tasks (check for conflicts): ${JSON.stringify(context.scheduledTasks)}
+Scheduled Tasks (FIXED - work around these): ${JSON.stringify(context.scheduledTasks)}
 
-Calendar Events: ${JSON.stringify(context.calendarEvents)}
+Calendar Events (FIXED - work around these): ${JSON.stringify(context.calendarEvents)}
 
-Re-evaluate the schedule, resolve all conflicts, and return suggestions for optimal placement.`
+Find optimal time slots for the unscheduled tasks while avoiding all conflicts with scheduled tasks and calendar events.`
           }
         ],
         temperature: 0.7,
@@ -225,8 +231,15 @@ Re-evaluate the schedule, resolve all conflicts, and return suggestions for opti
         console.error('Error inserting suggestions:', insertError);
       }
 
-      // Update ALL tasks with the conflict-free schedule
+      // Update ONLY the unscheduled tasks with new schedule
       for (const suggestion of suggestions) {
+        // Double-check that we're only updating tasks that were unscheduled
+        const taskToUpdate = unscheduledTasks.find(t => t.id === suggestion.task_id);
+        if (!taskToUpdate) {
+          console.warn(`Skipping update for task ${suggestion.task_id} - not in unscheduled list`);
+          continue;
+        }
+
         const suggestedStart = new Date(suggestion.suggested_start);
         const scheduledDate = suggestedStart.toISOString().split('T')[0];
         const scheduledTime = suggestedStart.toISOString().split('T')[1].substring(0, 8); // Include seconds (HH:MM:SS)
@@ -242,11 +255,11 @@ Re-evaluate the schedule, resolve all conflicts, and return suggestions for opti
       }
     }
 
-    console.log(`Optimized schedule with ${insertData.length} conflict-free tasks`);
+    console.log(`Scheduled ${insertData.length} unscheduled tasks`);
 
     return new Response(
       JSON.stringify({ 
-        message: `Optimized schedule with ${insertData.length} conflict-free tasks`,
+        message: `Scheduled ${insertData.length} unscheduled tasks`,
         suggestions: insertData 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
