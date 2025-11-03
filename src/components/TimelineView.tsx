@@ -39,16 +39,17 @@ interface TimelineViewProps {
 export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, onTaskClick, wakeTime = "08:00", bedTime = "22:00", downtimeStart, downtimeEnd }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // Generate hours starting from wake time
+  // Generate all 24 hours starting from midnight
   const [wakeHour] = wakeTime.split(':').map(Number);
-  const hours = Array.from({ length: 24 }, (_, i) => (wakeHour + i) % 24);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
   
-  // Scroll to top (which is now wake time) on mount
+  // Scroll to wake time on mount
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
+      const hourHeight = 80; // Each hour is 80px tall
+      scrollRef.current.scrollTop = wakeHour * hourHeight;
     }
-  }, []);
+  }, [wakeHour]);
 
   const isSleepHour = (hour: number) => {
     const [bedHour, bedMinute] = bedTime.split(':').map(Number);
