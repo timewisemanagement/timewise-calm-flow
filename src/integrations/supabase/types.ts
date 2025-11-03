@@ -166,6 +166,7 @@ export type Database = {
           priority: string | null
           recurrence_days: string[] | null
           recurrence_end_date: string | null
+          recurrence_group_id: string | null
           recurrence_pattern: string | null
           scheduled_at: string | null
           scheduled_date: string | null
@@ -188,6 +189,7 @@ export type Database = {
           priority?: string | null
           recurrence_days?: string[] | null
           recurrence_end_date?: string | null
+          recurrence_group_id?: string | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
           scheduled_date?: string | null
@@ -210,6 +212,7 @@ export type Database = {
           priority?: string | null
           recurrence_days?: string[] | null
           recurrence_end_date?: string | null
+          recurrence_group_id?: string | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
           scheduled_date?: string | null

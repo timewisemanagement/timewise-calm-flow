@@ -29,6 +29,9 @@ interface Task {
   end_time: string | null;
   commute_minutes?: number;
   recurrence_pattern?: string;
+  recurrence_days?: string[];
+  recurrence_end_date?: string | null;
+  recurrence_group_id?: string | null;
   color?: string;
 }
 
@@ -119,17 +122,20 @@ const Schedule = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Find all tasks with matching properties
-      const { error } = await supabase
-        .from("tasks")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("title", taskToDelete.title)
-        .eq("recurrence_pattern", taskToDelete.recurrence_pattern)
-        .eq("duration_minutes", taskToDelete.duration_minutes);
+      // Delete all tasks with the same recurrence_group_id
+      if (taskToDelete.recurrence_group_id) {
+        const { error } = await supabase
+          .from("tasks")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("recurrence_group_id", taskToDelete.recurrence_group_id);
 
-      if (error) throw error;
-      toast.success("All recurring tasks deleted");
+        if (error) throw error;
+        toast.success("All recurring tasks deleted");
+      } else {
+        toast.error("Cannot delete recurring tasks: No recurrence group found");
+      }
+      
       fetchTasks();
       setShowRecurringDeleteDialog(false);
       setTaskToDelete(null);

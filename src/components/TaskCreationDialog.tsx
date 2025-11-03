@@ -212,6 +212,9 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         const tasksToCreate = [];
         const startDate = new Date();
         const endDate = taskToCreate.recurrence_end_date ? new Date(taskToCreate.recurrence_end_date) : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+        
+        // Generate a unique group ID for this recurring sequence
+        const recurrenceGroupId = crypto.randomUUID();
 
         let currentDate = new Date(startDate);
         
@@ -231,6 +234,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
               recurrence_pattern: taskToCreate.recurrence_pattern,
               recurrence_days: taskToCreate.recurrence_days,
               recurrence_end_date: taskToCreate.recurrence_end_date || null,
+              recurrence_group_id: recurrenceGroupId,
             });
             currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
           } else if (taskToCreate.recurrence_pattern === 'weekly' && taskToCreate.recurrence_days.length > 0) {
@@ -251,6 +255,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
                 recurrence_pattern: taskToCreate.recurrence_pattern,
                 recurrence_days: taskToCreate.recurrence_days,
                 recurrence_end_date: taskToCreate.recurrence_end_date || null,
+                recurrence_group_id: recurrenceGroupId,
               });
             }
             currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
