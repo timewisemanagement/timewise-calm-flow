@@ -47,7 +47,12 @@ export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, 
   useEffect(() => {
     if (scrollRef.current) {
       const hourHeight = 80; // Each hour is 80px tall
-      scrollRef.current.scrollTop = wakeHour * hourHeight;
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = wakeHour * hourHeight;
+        }
+      }, 50);
     }
   }, [wakeHour]);
 
