@@ -289,6 +289,103 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         return;
       }
 
+      // Handle recurring tasks WITHOUT time - create multiple pending instances for AI to schedule
+      if (isRecurringWithoutTime) {
+        const tasksToCreate = [];
+        const startDate = new Date();
+        const endDate = taskToCreate.recurrence_end_date ? new Date(taskToCreate.recurrence_end_date) : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+        
+        // Generate a unique group ID for this recurring sequence
+        const recurrenceGroupId = crypto.randomUUID();
+
+        let currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          if (taskToCreate.recurrence_pattern === 'daily') {
+            tasksToCreate.push({
+              user_id: user.id,
+              title: taskToCreate.title,
+              description: taskToCreate.description,
+              duration_minutes: taskToCreate.duration_minutes,
+              priority: taskToCreate.priority,
+              tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
+              status: 'pending',  // Pending because AI needs to schedule
+              scheduled_date: null,  // AI will set this
+              scheduled_time: null,  // AI will set this
+              commute_minutes: taskToCreate.commute_minutes,
+              recurrence_pattern: taskToCreate.recurrence_pattern,
+              recurrence_days: taskToCreate.recurrence_days,
+              recurrence_end_date: taskToCreate.recurrence_end_date || null,
+              recurrence_group_id: recurrenceGroupId,
+            });
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+          } else if (taskToCreate.recurrence_pattern === 'weekly' && taskToCreate.recurrence_days.length > 0) {
+            const dayOfWeek = currentDate.getDay();
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            if (taskToCreate.recurrence_days.includes(dayNames[dayOfWeek])) {
+              tasksToCreate.push({
+                user_id: user.id,
+                title: taskToCreate.title,
+                description: taskToCreate.description,
+                duration_minutes: taskToCreate.duration_minutes,
+                priority: taskToCreate.priority,
+                tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
+                status: 'pending',  // Pending because AI needs to schedule
+                scheduled_date: null,  // AI will set this
+                scheduled_time: null,  // AI will set this
+                commute_minutes: taskToCreate.commute_minutes,
+                recurrence_pattern: taskToCreate.recurrence_pattern,
+                recurrence_days: taskToCreate.recurrence_days,
+                recurrence_end_date: taskToCreate.recurrence_end_date || null,
+                recurrence_group_id: recurrenceGroupId,
+              });
+            }
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+          }
+        }
+
+        if (tasksToCreate.length === 0) {
+          toast.error('No tasks to create. Please select days for weekly recurrence.');
+          return;
+        }
+
+        const { error } = await supabase.from('tasks').insert(tasksToCreate);
+        if (error) throw error;
+        
+        toast.success(`Created ${tasksToCreate.length} recurring tasks`);
+        
+        // Trigger AI to schedule all these tasks
+        toast.info('AI is optimizing your schedule...');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await supabase.functions.invoke('generate-suggestions', {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          });
+        } catch (aiError) {
+          console.error('AI scheduling error:', aiError);
+          toast.error('Tasks created but AI optimization failed.');
+        }
+
+        setNewTask({
+          title: '',
+          description: '',
+          duration_minutes: 60,
+          priority: 'medium',
+          tags: '',
+          scheduled_date: '',
+          scheduled_time: '',
+          commute_minutes: 0,
+          recurrence_pattern: 'once',
+          recurrence_days: [],
+          recurrence_end_date: '',
+        });
+        onOpenChange(false);
+        onTaskCreated();
+        return;
+      }
+
       // Create single task
       const { error } = await supabase.from('tasks').insert({
         user_id: user.id,
