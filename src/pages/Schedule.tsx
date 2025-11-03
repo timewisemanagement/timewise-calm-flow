@@ -92,10 +92,18 @@ const Schedule = () => {
     // Find the task to check if it's recurring
     const task = tasks.find(t => t.id === taskId);
     
-    if (task?.recurrence_pattern) {
-      // Show dialog for recurring tasks
-      setTaskToDelete(task);
-      setShowRecurringDeleteDialog(true);
+    if (task?.recurrence_pattern && task?.recurrence_group_id) {
+      // Check how many tasks are in this recurring sequence
+      const tasksInSequence = tasks.filter(t => t.recurrence_group_id === task.recurrence_group_id);
+      
+      if (tasksInSequence.length > 1) {
+        // Show dialog only if there are multiple tasks in the sequence
+        setTaskToDelete(task);
+        setShowRecurringDeleteDialog(true);
+      } else {
+        // Delete single task directly if it's the only one
+        await deleteSingleTask(taskId);
+      }
     } else {
       // Delete single task directly
       await deleteSingleTask(taskId);
