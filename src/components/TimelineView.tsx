@@ -45,15 +45,16 @@ export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, 
   
   // Scroll to wake time on mount
   useEffect(() => {
-    if (scrollRef.current) {
-      const hourHeight = 80; // Each hour is 80px tall
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = wakeHour * hourHeight;
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          const hourHeight = 80; // Each hour is 80px tall
+          viewport.scrollTop = wakeHour * hourHeight;
         }
-      }, 50);
-    }
+      }
+    });
   }, [wakeHour]);
 
   const isSleepHour = (hour: number) => {
