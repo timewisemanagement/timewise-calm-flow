@@ -8,6 +8,7 @@ import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { TaskCreationDialog } from "@/components/TaskCreationDialog";
 import { TaskDetailsDialog } from "@/components/TaskDetailsDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
+import { RecurringTaskDeleteDialog } from "@/components/RecurringTaskDeleteDialog";
 import { CalendarView } from "@/components/CalendarView";
 import { TimelineView } from "@/components/TimelineView";
 import { Celebration } from "@/components/Celebration";
@@ -43,6 +44,8 @@ const Schedule = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const [showRecurringDeleteDialog, setShowRecurringDeleteDialog] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -83,6 +86,20 @@ const Schedule = () => {
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    // Find the task to check if it's recurring
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (task?.recurrence_pattern) {
+      // Show dialog for recurring tasks
+      setTaskToDelete(task);
+      setShowRecurringDeleteDialog(true);
+    } else {
+      // Delete single task directly
+      await deleteSingleTask(taskId);
+    }
+  };
+
+  const deleteSingleTask = async (taskId: string) => {
     try {
       const { error } = await supabase.from("tasks").delete().eq("id", taskId);
       if (error) throw error;
@@ -90,6 +107,34 @@ const Schedule = () => {
       fetchTasks();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete task");
+    }
+  };
+
+  const deleteAllRecurringTasks = async () => {
+    if (!taskToDelete) return;
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Find all tasks with matching properties
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("title", taskToDelete.title)
+        .eq("recurrence_pattern", taskToDelete.recurrence_pattern)
+        .eq("duration_minutes", taskToDelete.duration_minutes);
+
+      if (error) throw error;
+      toast.success("All recurring tasks deleted");
+      fetchTasks();
+      setShowRecurringDeleteDialog(false);
+      setTaskToDelete(null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete recurring tasks");
     }
   };
 
@@ -255,6 +300,20 @@ const Schedule = () => {
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
           onSave={handleEditTask}
+        />
+
+        <RecurringTaskDeleteDialog
+          open={showRecurringDeleteDialog}
+          onOpenChange={setShowRecurringDeleteDialog}
+          onDeleteOne={async () => {
+            if (taskToDelete) {
+              await deleteSingleTask(taskToDelete.id);
+              setShowRecurringDeleteDialog(false);
+              setTaskToDelete(null);
+            }
+          }}
+          onDeleteAll={deleteAllRecurringTasks}
+          taskTitle={taskToDelete?.title || ""}
         />
       </main>
     </div>
