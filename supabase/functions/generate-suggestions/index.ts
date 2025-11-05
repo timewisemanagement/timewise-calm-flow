@@ -195,12 +195,19 @@ Find optimal time slots for the unscheduled tasks while avoiding all conflicts w
     // Parse AI response
     let suggestions;
     try {
+      // Remove markdown code blocks if present
+      let cleanedContent = aiContent.trim();
+      if (cleanedContent.startsWith('```')) {
+        // Remove opening ```json or ``` and closing ```
+        cleanedContent = cleanedContent.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+      }
+      
       // Extract JSON array from response
-      const jsonMatch = aiContent.match(/\[[\s\S]*\]/);
+      const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         suggestions = JSON.parse(jsonMatch[0]);
       } else {
-        suggestions = JSON.parse(aiContent);
+        suggestions = JSON.parse(cleanedContent);
       }
     } catch (e) {
       console.error('Failed to parse AI response:', e);
