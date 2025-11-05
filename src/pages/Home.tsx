@@ -55,6 +55,7 @@ const Home = () => {
           .from("tasks")
           .select("*")
           .eq("user_id", user.id)
+          .is("deleted_at", null)
           .order("scheduled_date", { ascending: true })
           .order("scheduled_time", { ascending: true }),
         supabase.from("profiles").select("*").eq("id", user.id).single(),
