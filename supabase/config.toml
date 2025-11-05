@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.purge-old-tasks]
 verify_jwt = false
+
+[functions.sync-canvas]
+verify_jwt = true

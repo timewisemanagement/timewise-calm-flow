@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, User, Clock, Moon, Sun, Coffee, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Clock, Moon, Sun, Coffee, Trash2, Book } from "lucide-react";
 import { DeletedTasksDialog } from "@/components/DeletedTasksDialog";
 
 interface ProfileData {
@@ -19,6 +19,9 @@ interface ProfileData {
   downtime_end: string | null;
   focus_preference: string | null;
   ideal_focus_duration: number;
+  canvas_url: string | null;
+  canvas_connected: boolean;
+  canvas_last_sync: string | null;
 }
 
 const Profile = () => {
@@ -26,6 +29,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeletedTasks, setShowDeletedTasks] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     first_name: "",
     last_name: "",
@@ -36,6 +40,9 @@ const Profile = () => {
     downtime_end: null,
     focus_preference: null,
     ideal_focus_duration: 60,
+    canvas_url: null,
+    canvas_connected: false,
+    canvas_last_sync: null,
   });
 
   useEffect(() => {
@@ -74,6 +81,9 @@ const Profile = () => {
           downtime_end: data.downtime_end,
           focus_preference: data.focus_preference,
           ideal_focus_duration: data.ideal_focus_duration || 60,
+          canvas_url: data.canvas_url || null,
+          canvas_connected: data.canvas_connected || false,
+          canvas_last_sync: data.canvas_last_sync || null,
         });
       }
     } catch (error: any) {
@@ -103,6 +113,7 @@ const Profile = () => {
           downtime_end: profile.downtime_end,
           focus_preference: profile.focus_preference,
           ideal_focus_duration: profile.ideal_focus_duration,
+          canvas_url: profile.canvas_url,
         })
         .eq("id", user.id);
 
@@ -113,6 +124,34 @@ const Profile = () => {
       toast.error(error.message || "Failed to update profile");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCanvasSync = async () => {
+    if (!profile.canvas_url) {
+      toast.error('Please enter your Canvas URL first and save');
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('sync-canvas', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success(data.message || 'Canvas synced successfully');
+      fetchProfile(); // Refresh to show updated sync time
+    } catch (error: any) {
+      console.error('Canvas sync error:', error);
+      toast.error(error.message || 'Failed to sync Canvas');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -281,6 +320,44 @@ const Profile = () => {
                   onChange={(e) => setProfile({ ...profile, ideal_focus_duration: parseInt(e.target.value) || 60 })}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Canvas Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Book className="w-5 h-5" />
+                Canvas Integration
+              </CardTitle>
+              <CardDescription>Connect your Canvas account to import homework assignments</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="canvas_url">Canvas URL</Label>
+                <Input
+                  id="canvas_url"
+                  value={profile.canvas_url || ""}
+                  onChange={(e) => setProfile({ ...profile, canvas_url: e.target.value })}
+                  placeholder="https://canvas.instructure.com"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enter your Canvas instance URL (e.g., https://canvas.instructure.com)
+                </p>
+              </div>
+              {profile.canvas_connected && profile.canvas_last_sync && (
+                <p className="text-sm text-muted-foreground">
+                  Last synced: {new Date(profile.canvas_last_sync).toLocaleString()}
+                </p>
+              )}
+              <Button 
+                onClick={handleCanvasSync} 
+                disabled={isSyncing || !profile.canvas_url}
+                variant="outline" 
+                className="w-full"
+              >
+                {isSyncing ? "Syncing..." : profile.canvas_connected ? "Sync Canvas" : "Connect Canvas"}
+              </Button>
             </CardContent>
           </Card>
 
