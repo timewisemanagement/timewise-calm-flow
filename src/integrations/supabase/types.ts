@@ -59,6 +59,9 @@ export type Database = {
       profiles: {
         Row: {
           bed_time: string | null
+          canvas_connected: boolean | null
+          canvas_last_sync: string | null
+          canvas_url: string | null
           color_scheme: string | null
           created_at: string | null
           downtime_end: string | null
@@ -76,6 +79,9 @@ export type Database = {
         }
         Insert: {
           bed_time?: string | null
+          canvas_connected?: boolean | null
+          canvas_last_sync?: string | null
+          canvas_url?: string | null
           color_scheme?: string | null
           created_at?: string | null
           downtime_end?: string | null
@@ -93,6 +99,9 @@ export type Database = {
         }
         Update: {
           bed_time?: string | null
+          canvas_connected?: boolean | null
+          canvas_last_sync?: string | null
+          canvas_url?: string | null
           color_scheme?: string | null
           created_at?: string | null
           downtime_end?: string | null
