@@ -13,7 +13,13 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    
+    // For POST requests, get action from body; for GET, from query params
+    let action = url.searchParams.get('action');
+    if (req.method === 'POST') {
+      const body = await req.json();
+      action = body.action;
+    }
 
     // Handle authorization URL generation
     if (action === 'authorize') {
