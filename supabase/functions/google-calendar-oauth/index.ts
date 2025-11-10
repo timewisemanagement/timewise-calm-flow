@@ -61,6 +61,8 @@ serve(async (req) => {
       const code = url.searchParams.get('code');
       const state = url.searchParams.get('state');
 
+      console.log('Callback received - code:', !!code, 'state:', state);
+
       if (!code) {
         throw new Error('No authorization code received');
       }
@@ -69,16 +71,24 @@ serve(async (req) => {
       let userId;
       let appOrigin;
       
+      if (!state) {
+        console.error('No state parameter received');
+        throw new Error('User authentication required - no state');
+      }
+
       try {
-        const stateData = JSON.parse(state || '{}');
+        const stateData = JSON.parse(state);
         userId = stateData.userId;
         appOrigin = stateData.appOrigin;
+        console.log('Parsed state - userId:', userId, 'appOrigin:', appOrigin);
       } catch (e) {
-        console.error('Failed to parse state:', e);
+        console.error('Failed to parse state:', e, 'Raw state:', state);
+        throw new Error('User authentication required - invalid state format');
       }
 
       if (!userId || !appOrigin) {
-        throw new Error('User authentication required');
+        console.error('Missing userId or appOrigin - userId:', userId, 'appOrigin:', appOrigin);
+        throw new Error('User authentication required - missing data');
       }
 
       const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
