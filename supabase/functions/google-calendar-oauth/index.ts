@@ -118,6 +118,20 @@ serve(async (req) => {
 
       const tokens = await tokenResponse.json();
       
+      // Fetch user's Google account email
+      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${tokens.access_token}`,
+        },
+      });
+
+      let googleEmail = null;
+      if (userInfoResponse.ok) {
+        const userInfo = await userInfoResponse.json();
+        googleEmail = userInfo.email;
+        console.log('Fetched Google email:', googleEmail);
+      }
+      
       const supabaseClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -134,6 +148,7 @@ serve(async (req) => {
           google_calendar_refresh_token: tokens.refresh_token,
           google_calendar_token_expires_at: expiresAt,
           google_calendar_connected: true,
+          google_calendar_email: googleEmail,
         })
         .eq('id', userId);
 

@@ -24,6 +24,7 @@ interface ProfileData {
   canvas_last_sync: string | null;
   google_calendar_connected: boolean;
   google_calendar_last_sync: string | null;
+  google_calendar_email: string | null;
 }
 
 const Profile = () => {
@@ -48,6 +49,7 @@ const Profile = () => {
     canvas_last_sync: null,
     google_calendar_connected: false,
     google_calendar_last_sync: null,
+    google_calendar_email: null,
   });
 
   useEffect(() => {
@@ -101,6 +103,7 @@ const Profile = () => {
           canvas_last_sync: data.canvas_last_sync || null,
           google_calendar_connected: data.google_calendar_connected || false,
           google_calendar_last_sync: data.google_calendar_last_sync || null,
+          google_calendar_email: data.google_calendar_email || null,
         });
       }
     } catch (error: any) {
@@ -219,6 +222,35 @@ const Profile = () => {
       toast.error(error.message || 'Failed to sync Google Calendar');
     } finally {
       setIsSyncingGoogle(false);
+    }
+  };
+
+  const handleGoogleCalendarDisconnect = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          google_calendar_connected: false,
+          google_calendar_access_token: null,
+          google_calendar_refresh_token: null,
+          google_calendar_token_expires_at: null,
+          google_calendar_last_sync: null,
+          google_calendar_email: null,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast.success("Google Calendar disconnected");
+      fetchProfile();
+    } catch (error: any) {
+      console.error('Google Calendar disconnect error:', error);
+      toast.error(error.message || 'Failed to disconnect Google Calendar');
     }
   };
 
@@ -445,23 +477,34 @@ const Profile = () => {
                       <div className="w-2 h-2 bg-green-500 rounded-full" />
                       <span className="font-medium">Connected</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Your Google Calendar is connected
-                    </p>
+                    {profile.google_calendar_email && (
+                      <p className="text-sm text-muted-foreground">
+                        {profile.google_calendar_email}
+                      </p>
+                    )}
                     {profile.google_calendar_last_sync && (
                       <p className="text-xs text-muted-foreground">
                         Last synced: {new Date(profile.google_calendar_last_sync).toLocaleString()}
                       </p>
                     )}
                   </div>
-                  <Button 
-                    onClick={handleGoogleCalendarSync} 
-                    disabled={isSyncingGoogle}
-                    variant="outline" 
-                    className="w-full"
-                  >
-                    {isSyncingGoogle ? "Syncing..." : "Sync Google Calendar"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleGoogleCalendarSync} 
+                      disabled={isSyncingGoogle}
+                      variant="outline" 
+                      className="flex-1"
+                    >
+                      {isSyncingGoogle ? "Syncing..." : "Sync Calendar"}
+                    </Button>
+                    <Button 
+                      onClick={handleGoogleCalendarDisconnect} 
+                      variant="destructive"
+                      size="icon"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <Button 

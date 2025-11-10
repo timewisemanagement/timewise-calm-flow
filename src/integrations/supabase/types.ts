@@ -74,6 +74,7 @@ export type Database = {
           focus_preference: string | null
           google_calendar_access_token: string | null
           google_calendar_connected: boolean | null
+          google_calendar_email: string | null
           google_calendar_last_sync: string | null
           google_calendar_refresh_token: string | null
           google_calendar_token_expires_at: string | null
@@ -102,6 +103,7 @@ export type Database = {
           focus_preference?: string | null
           google_calendar_access_token?: string | null
           google_calendar_connected?: boolean | null
+          google_calendar_email?: string | null
           google_calendar_last_sync?: string | null
           google_calendar_refresh_token?: string | null
           google_calendar_token_expires_at?: string | null
@@ -130,6 +132,7 @@ export type Database = {
           focus_preference?: string | null
           google_calendar_access_token?: string | null
           google_calendar_connected?: boolean | null
+          google_calendar_email?: string | null
           google_calendar_last_sync?: string | null
           google_calendar_refresh_token?: string | null
           google_calendar_token_expires_at?: string | null
