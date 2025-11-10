@@ -16,15 +16,30 @@ serve(async (req) => {
     
     // For POST requests, get action from body; for GET, from query params
     let action = url.searchParams.get('action');
+    let body;
     if (req.method === 'POST') {
-      const body = await req.json();
+      body = await req.json();
       action = body.action;
     }
 
     // Handle authorization URL generation
     if (action === 'authorize') {
+      // Get userId and appOrigin from request body
+      const userId = body?.userId;
+      const appOrigin = body?.appOrigin;
+      
+      if (!userId || !appOrigin) {
+        return new Response(
+          JSON.stringify({ error: 'User ID and app origin are required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
       const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-oauth?action=callback`;
+      
+      // Encode userId and appOrigin together in state
+      const stateData = JSON.stringify({ userId, appOrigin });
       
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authUrl.searchParams.append('client_id', clientId!);
@@ -33,6 +48,7 @@ serve(async (req) => {
       authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/calendar.readonly');
       authUrl.searchParams.append('access_type', 'offline');
       authUrl.searchParams.append('prompt', 'consent');
+      authUrl.searchParams.append('state', stateData);
 
       return new Response(
         JSON.stringify({ authUrl: authUrl.toString() }),
@@ -47,6 +63,22 @@ serve(async (req) => {
 
       if (!code) {
         throw new Error('No authorization code received');
+      }
+
+      // Parse state to get userId and appOrigin
+      let userId;
+      let appOrigin;
+      
+      try {
+        const stateData = JSON.parse(state || '{}');
+        userId = stateData.userId;
+        appOrigin = stateData.appOrigin;
+      } catch (e) {
+        console.error('Failed to parse state:', e);
+      }
+
+      if (!userId || !appOrigin) {
+        throw new Error('User authentication required');
       }
 
       const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
@@ -76,35 +108,10 @@ serve(async (req) => {
 
       const tokens = await tokenResponse.json();
       
-      // Get user ID from state or authorization header
-      const authHeader = req.headers.get('Authorization');
       const supabaseClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
-
-      let userId = state; // User ID passed in state parameter
-
-      if (!userId && authHeader) {
-        const userClient = createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          {
-            global: {
-              headers: { Authorization: authHeader },
-            },
-          }
-        );
-
-        const { data: { user }, error: userError } = await userClient.auth.getUser();
-        if (user && !userError) {
-          userId = user.id;
-        }
-      }
-
-      if (!userId) {
-        throw new Error('User authentication required');
-      }
 
       // Calculate token expiration
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
@@ -130,7 +137,7 @@ serve(async (req) => {
         status: 302,
         headers: {
           ...corsHeaders,
-          'Location': `${url.origin}/profile?google_calendar=connected`,
+          'Location': `${appOrigin}/profile?google_calendar=connected`,
         },
       });
     }

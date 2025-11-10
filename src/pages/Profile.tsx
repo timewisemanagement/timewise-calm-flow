@@ -164,12 +164,17 @@ const Profile = () => {
 
   const handleGoogleCalendarConnect = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please log in to connect Google Calendar');
+        return;
+      }
       
       const { data, error } = await supabase.functions.invoke('google-calendar-oauth', {
-        body: { action: 'authorize' },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+        body: { 
+          action: 'authorize', 
+          userId: user.id,
+          appOrigin: window.location.origin
         },
       });
 
