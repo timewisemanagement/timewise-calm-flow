@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.sync-canvas]
 verify_jwt = true
+
+[functions.google-calendar-oauth]
+verify_jwt = false
+
+[functions.sync-google-calendar]
+verify_jwt = true

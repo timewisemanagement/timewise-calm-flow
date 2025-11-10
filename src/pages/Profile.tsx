@@ -22,6 +22,8 @@ interface ProfileData {
   canvas_url: string | null;
   canvas_connected: boolean;
   canvas_last_sync: string | null;
+  google_calendar_connected: boolean;
+  google_calendar_last_sync: string | null;
 }
 
 const Profile = () => {
@@ -30,6 +32,7 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showDeletedTasks, setShowDeletedTasks] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     first_name: "",
     last_name: "",
@@ -43,6 +46,8 @@ const Profile = () => {
     canvas_url: null,
     canvas_connected: false,
     canvas_last_sync: null,
+    google_calendar_connected: false,
+    google_calendar_last_sync: null,
   });
 
   useEffect(() => {
@@ -84,6 +89,8 @@ const Profile = () => {
           canvas_url: data.canvas_url || null,
           canvas_connected: data.canvas_connected || false,
           canvas_last_sync: data.canvas_last_sync || null,
+          google_calendar_connected: data.google_calendar_connected || false,
+          google_calendar_last_sync: data.google_calendar_last_sync || null,
         });
       }
     } catch (error: any) {
@@ -152,6 +159,51 @@ const Profile = () => {
       toast.error(error.message || 'Failed to sync Canvas');
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleGoogleCalendarConnect = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar-oauth', {
+        body: { action: 'authorize' },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error: any) {
+      console.error('Google Calendar connect error:', error);
+      toast.error(error.message || 'Failed to connect Google Calendar');
+    }
+  };
+
+  const handleGoogleCalendarSync = async () => {
+    try {
+      setIsSyncingGoogle(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success(data.message || 'Google Calendar synced successfully');
+      fetchProfile(); // Refresh to show updated sync time
+    } catch (error: any) {
+      console.error('Google Calendar sync error:', error);
+      toast.error(error.message || 'Failed to sync Google Calendar');
+    } finally {
+      setIsSyncingGoogle(false);
     }
   };
 
@@ -358,6 +410,42 @@ const Profile = () => {
               >
                 {isSyncing ? "Syncing..." : profile.canvas_connected ? "Sync Canvas" : "Connect Canvas"}
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Google Calendar Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Google Calendar Integration
+              </CardTitle>
+              <CardDescription>Connect your Google Calendar to import events</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {profile.google_calendar_connected && profile.google_calendar_last_sync && (
+                <p className="text-sm text-muted-foreground">
+                  Last synced: {new Date(profile.google_calendar_last_sync).toLocaleString()}
+                </p>
+              )}
+              {profile.google_calendar_connected ? (
+                <Button 
+                  onClick={handleGoogleCalendarSync} 
+                  disabled={isSyncingGoogle}
+                  variant="outline" 
+                  className="w-full"
+                >
+                  {isSyncingGoogle ? "Syncing..." : "Sync Google Calendar"}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleGoogleCalendarConnect} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  Connect Google Calendar
+                </Button>
+              )}
             </CardContent>
           </Card>
 
