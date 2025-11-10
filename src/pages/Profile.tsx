@@ -472,38 +472,36 @@ const Profile = () => {
             <CardContent className="space-y-4">
               {profile.google_calendar_connected ? (
                 <>
-                  <div className="p-3 bg-muted rounded-lg space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-green-500 rounded-full" />
-                      <span className="font-medium">Connected</span>
+                  <div className="p-4 bg-muted rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                          <span className="font-medium">Connected</span>
+                        </div>
+                        {profile.google_calendar_email ? (
+                          <p className="text-sm text-muted-foreground pl-4">
+                            {profile.google_calendar_email}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground pl-4">
+                            Reconnect to see account email
+                          </p>
+                        )}
+                        {profile.google_calendar_last_sync && (
+                          <p className="text-xs text-muted-foreground pl-4">
+                            Last synced: {new Date(profile.google_calendar_last_sync).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                      <Button 
+                        onClick={handleGoogleCalendarDisconnect} 
+                        variant="destructive"
+                        size="icon"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    {profile.google_calendar_email && (
-                      <p className="text-sm text-muted-foreground">
-                        {profile.google_calendar_email}
-                      </p>
-                    )}
-                    {profile.google_calendar_last_sync && (
-                      <p className="text-xs text-muted-foreground">
-                        Last synced: {new Date(profile.google_calendar_last_sync).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={handleGoogleCalendarSync} 
-                      disabled={isSyncingGoogle}
-                      variant="outline" 
-                      className="flex-1"
-                    >
-                      {isSyncingGoogle ? "Syncing..." : "Sync Calendar"}
-                    </Button>
-                    <Button 
-                      onClick={handleGoogleCalendarDisconnect} 
-                      variant="destructive"
-                      size="icon"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 </>
               ) : (
