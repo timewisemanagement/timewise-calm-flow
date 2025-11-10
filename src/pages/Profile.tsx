@@ -53,6 +53,16 @@ const Profile = () => {
   useEffect(() => {
     checkAuth();
     fetchProfile();
+    
+    // Check if returning from Google Calendar OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('google_calendar') === 'connected') {
+      toast.success('Google Calendar connected successfully!');
+      // Remove the query parameter
+      window.history.replaceState({}, '', '/profile');
+      // Refresh profile to get updated connection status
+      setTimeout(() => fetchProfile(), 500);
+    }
   }, []);
 
   const checkAuth = async () => {
@@ -428,20 +438,31 @@ const Profile = () => {
               <CardDescription>Connect your Google Calendar to import events</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {profile.google_calendar_connected && profile.google_calendar_last_sync && (
-                <p className="text-sm text-muted-foreground">
-                  Last synced: {new Date(profile.google_calendar_last_sync).toLocaleString()}
-                </p>
-              )}
               {profile.google_calendar_connected ? (
-                <Button 
-                  onClick={handleGoogleCalendarSync} 
-                  disabled={isSyncingGoogle}
-                  variant="outline" 
-                  className="w-full"
-                >
-                  {isSyncingGoogle ? "Syncing..." : "Sync Google Calendar"}
-                </Button>
+                <>
+                  <div className="p-3 bg-muted rounded-lg space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <span className="font-medium">Connected</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Your Google Calendar is connected
+                    </p>
+                    {profile.google_calendar_last_sync && (
+                      <p className="text-xs text-muted-foreground">
+                        Last synced: {new Date(profile.google_calendar_last_sync).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <Button 
+                    onClick={handleGoogleCalendarSync} 
+                    disabled={isSyncingGoogle}
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    {isSyncingGoogle ? "Syncing..." : "Sync Google Calendar"}
+                  </Button>
+                </>
               ) : (
                 <Button 
                   onClick={handleGoogleCalendarConnect} 
