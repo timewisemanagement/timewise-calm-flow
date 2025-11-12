@@ -386,6 +386,9 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
               Authorization: `Bearer ${session?.access_token}`,
             },
           });
+          // Wait for DB updates to propagate
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          toast.success('Tasks scheduled by AI!');
         } catch (aiError) {
           console.error('AI scheduling error:', aiError);
           toast.error('Tasks created but AI optimization failed.');
@@ -447,6 +450,10 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
             console.error('AI scheduling error:', invokeError);
             toast.error('Task created but AI scheduling failed. Check Profile to manually schedule.');
           } else {
+            console.log('AI scheduling completed, waiting for DB sync...');
+            // Wait for DB updates to propagate before refreshing UI
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log('DB sync complete, refreshing UI');
             toast.success('Task created and scheduled by AI!');
           }
         } catch (aiError) {

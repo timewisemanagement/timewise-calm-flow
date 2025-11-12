@@ -302,10 +302,13 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
             scheduled_time: scheduledTime,
             status: 'scheduled'
           })
-          .eq('id', suggestion.task_id);
+          .eq('id', suggestion.task_id)
+          .eq('user_id', user.id);  // Extra safety check
 
         if (updateError) {
           console.error(`Failed to schedule task ${suggestion.task_id}:`, updateError);
+        } else {
+          console.log(`✓ Successfully scheduled task ${suggestion.task_id}`);
         }
       }
     }
