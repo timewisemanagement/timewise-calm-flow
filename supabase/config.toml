@@ -9,7 +9,10 @@ verify_jwt = false
 [functions.sync-canvas]
 verify_jwt = true
 
-[functions.google-calendar-oauth]
+[functions.google-calendar-authorize]
+verify_jwt = true
+
+[functions.google-calendar-callback]
 verify_jwt = false
 
 [functions.sync-google-calendar]

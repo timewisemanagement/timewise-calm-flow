@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Clock, Calendar, Target } from "lucide-react";
+import { authSchema } from "@/lib/validationSchemas";
+import { z } from "zod";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -30,13 +32,26 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      // Validate inputs
+      const validationData = isSignUp 
+        ? { email, password, displayName }
+        : { email, password };
+      
+      const result = authSchema.safeParse(validationData);
+      if (!result.success) {
+        const firstError = result.error.errors[0];
+        toast.error(firstError.message);
+        setIsLoading(false);
+        return;
+      }
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: result.data.email,
+          password: result.data.password,
           options: {
             data: {
-              display_name: displayName,
+              display_name: result.data.displayName,
             },
             emailRedirectTo: `${window.location.origin}/`,
           },
@@ -47,8 +62,8 @@ const Auth = () => {
         navigate("/onboarding");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: result.data.email,
+          password: result.data.password,
         });
 
         if (error) throw error;
@@ -56,7 +71,11 @@ const Auth = () => {
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error(error.message || "An error occurred");
+      }
     } finally {
       setIsLoading(false);
     }

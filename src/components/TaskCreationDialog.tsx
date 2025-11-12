@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { WarningDialog } from '@/components/WarningDialog';
+import { taskSchema } from '@/lib/validationSchemas';
+import { z } from 'zod';
 
 interface TaskCreationDialogProps {
   open: boolean;
@@ -69,9 +71,30 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
   };
 
   const handleCreateTask = async (taskToCreate: NewTask = newTask, force: boolean = false) => {
-    if (!taskToCreate.title.trim()) {
-      toast.error('Please enter a task title');
-      return;
+    // Validate task inputs
+    try {
+      const validationData = {
+        title: taskToCreate.title,
+        description: taskToCreate.description || undefined,
+        duration_minutes: taskToCreate.duration_minutes,
+        priority: taskToCreate.priority,
+        tags: taskToCreate.tags || undefined,
+        scheduled_date: taskToCreate.scheduled_date || undefined,
+        scheduled_time: taskToCreate.scheduled_time || undefined,
+        commute_minutes: taskToCreate.commute_minutes || 0,
+      };
+
+      const result = taskSchema.safeParse(validationData);
+      if (!result.success) {
+        const firstError = result.error.errors[0];
+        toast.error(firstError.message);
+        return;
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
     }
 
     if (taskToCreate.scheduled_time && !taskToCreate.scheduled_date && taskToCreate.recurrence_pattern === 'once') {

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ArrowLeft, User, Clock, Moon, Sun, Coffee, Trash2 } from "lucide-react";
 import { DeletedTasksDialog } from "@/components/DeletedTasksDialog";
+import { profileSchema } from "@/lib/validationSchemas";
+import { z } from "zod";
 
 interface ProfileData {
   first_name: string;
@@ -111,6 +113,26 @@ const Profile = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Validate profile data
+      const validationData = {
+        first_name: profile.first_name || undefined,
+        last_name: profile.last_name || undefined,
+        email: profile.email,
+        sleep_time: profile.bed_time || null,
+        wake_time: profile.wake_time || null,
+        downtime_start: profile.downtime_start || null,
+        downtime_end: profile.downtime_end || null,
+        focus_session_duration: profile.ideal_focus_duration || null,
+      };
+
+      const result = profileSchema.safeParse(validationData);
+      if (!result.success) {
+        const firstError = result.error.errors[0];
+        toast.error(firstError.message);
+        setIsSaving(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -130,7 +152,11 @@ const Profile = () => {
 
       toast.success("Profile updated successfully");
     } catch (error: any) {
-      toast.error(error.message || "Failed to update profile");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error(error.message || "Failed to update profile");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -143,10 +169,18 @@ const Profile = () => {
         toast.error('Please log in to connect Google Calendar');
         return;
       }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to connect Google Calendar');
+        return;
+      }
       
-      const { data, error } = await supabase.functions.invoke('google-calendar-oauth', {
+      const { data, error } = await supabase.functions.invoke('google-calendar-authorize', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: { 
-          action: 'authorize', 
           userId: user.id,
           appOrigin: window.location.origin
         },
