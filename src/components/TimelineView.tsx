@@ -32,6 +32,7 @@ interface CalendarEvent {
   end_time: string;
   location: string | null;
   provider_event_id: string;
+  attended?: boolean;
 }
 
 interface TimelineViewProps {
@@ -41,13 +42,14 @@ interface TimelineViewProps {
   onUpdateStatus: (taskId: string, status: string) => void;
   onEditTask: (task: Task) => void;
   onTaskClick: (task: Task) => void;
+  onUpdateEventAttended?: (eventId: string, attended: boolean) => void;
   wakeTime?: string;
   bedTime?: string;
   downtimeStart?: string;
   downtimeEnd?: string;
 }
 
-export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStatus, onEditTask, onTaskClick, wakeTime = "08:00", bedTime = "22:00", downtimeStart, downtimeEnd }: TimelineViewProps) {
+export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStatus, onEditTask, onTaskClick, onUpdateEventAttended, wakeTime = "08:00", bedTime = "22:00", downtimeStart, downtimeEnd }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // Generate all 24 hours starting from midnight
@@ -290,7 +292,7 @@ export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStat
                   return (
                     <Card 
                       key={event.id} 
-                      className="absolute left-2 right-2 p-2 cursor-default border-2 border-purple-500"
+                      className="absolute left-2 right-2 p-2 border-2 border-purple-500"
                       style={{ 
                         top: `${topOffset}px`, 
                         height: `${heightPx}px`,
@@ -302,7 +304,7 @@ export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStat
                       <div className={`h-full ${isSmall ? 'overflow-y-auto' : 'overflow-hidden'}`}>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 overflow-hidden">
-                            <div className={`font-medium flex items-center gap-1 ${isSmall ? 'text-xs' : 'text-sm'}`}>
+                            <div className={`font-medium flex items-center gap-1 ${isSmall ? 'text-xs' : 'text-sm'} ${event.attended ? 'line-through opacity-60' : ''}`}>
                               <span className="text-purple-600">📅</span>
                               {event.title}
                             </div>
@@ -315,6 +317,26 @@ export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStat
                               <span>{format(eventStart, 'h:mm a')} - {format(eventEnd, 'h:mm a')}</span>
                             </div>
                           </div>
+                          {!isSmall && onUpdateEventAttended && (
+                            <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  onUpdateEventAttended(event.id, !event.attended);
+                                }}
+                                title={event.attended ? "Mark as not attended" : "Mark as attended"}
+                              >
+                                {event.attended ? (
+                                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Card>

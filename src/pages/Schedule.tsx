@@ -44,6 +44,7 @@ interface CalendarEvent {
   end_time: string;
   location: string | null;
   provider_event_id: string;
+  attended?: boolean;
 }
 
 const Schedule = () => {
@@ -221,6 +222,20 @@ const Schedule = () => {
     }
   };
 
+  const handleUpdateEventAttended = async (eventId: string, attended: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("calendar_events")
+        .update({ attended })
+        .eq("id", eventId);
+      if (error) throw error;
+      toast.success(attended ? "Event marked as attended" : "Event marked as not attended");
+      fetchTasks();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update event");
+    }
+  };
+
   const handleEditTask = async (taskId: string, updates: Partial<Task>) => {
     try {
       const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
@@ -314,6 +329,7 @@ const Schedule = () => {
                 calendarEvents={todayEvents}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
+                onUpdateEventAttended={handleUpdateEventAttended}
                 onEditTask={(task) => {
                   setSelectedTask(task);
                   setShowEditDialog(true);

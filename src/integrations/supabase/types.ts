@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       calendar_events: {
         Row: {
+          attended: boolean | null
           created_at: string | null
           description: string | null
           end_time: string
@@ -29,6 +30,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attended?: boolean | null
           created_at?: string | null
           description?: string | null
           end_time: string
@@ -42,6 +44,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attended?: boolean | null
           created_at?: string | null
           description?: string | null
           end_time?: string
