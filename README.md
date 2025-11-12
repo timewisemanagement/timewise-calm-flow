@@ -179,30 +179,6 @@ Fully responsive interface optimized for:
 
 This project is part of the Lovable platform. See [Lovable Documentation](https://docs.lovable.dev) for more information.
 
-## 🌐 Deployment
-
-### Quick Deploy
-Simply open [Lovable](https://lovable.dev/projects/b23cdb38-6a3d-4c13-96b9-6c88c10b8143) and click Share → Publish.
-
-### Custom Domain
-Navigate to Project → Settings → Domains to connect your custom domain.
-
-## 📞 Support & Resources
-
-- **Documentation**: [Lovable Docs](https://docs.lovable.dev)
-- **Community**: [Discord Server](https://discord.com/channels/1119885301872070706/1280461670979993613)
-- **Tutorials**: [YouTube Playlist](https://www.youtube.com/watch?v=9KHLTZaJcR8&list=PLbVHz4urQBZkJiAWdG8HWoJTdgEysigIO)
-
-## 🎯 Future Roadmap
-
-- Email notifications for upcoming tasks
-- Team collaboration features
-- Mobile native applications
-- Advanced analytics and reporting
-- Integration with additional calendar services
-- Voice input for task creation
-- Smart task delegation
-
 ---
 
 **Built with ❤️ using [Lovable](https://lovable.dev)** - The fastest way to build modern web applications
