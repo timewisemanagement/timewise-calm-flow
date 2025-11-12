@@ -36,10 +36,21 @@ interface Task {
   color?: string;
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  provider_event_id: string;
+}
+
 const Schedule = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -72,9 +83,10 @@ const Schedule = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [tasksResult, profileResult] = await Promise.all([
+      const [tasksResult, profileResult, eventsResult] = await Promise.all([
         supabase.from("tasks").select("*").eq("user_id", user.id).is("deleted_at", null).order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.from("calendar_events").select("*").eq("user_id", user.id).order("start_time", { ascending: true }),
       ]);
 
       if (tasksResult.error) throw tasksResult.error;
@@ -82,6 +94,7 @@ const Schedule = () => {
 
       setTasks(tasksResult.data || []);
       setUserProfile(profileResult.data);
+      setCalendarEvents(eventsResult.data || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to fetch tasks");
     } finally {
@@ -208,7 +221,18 @@ const Schedule = () => {
       });
   };
 
+  const getCalendarEventsForDate = (date: Date) => {
+    const dateStart = startOfDay(date);
+    const dateEnd = endOfDay(date);
+
+    return calendarEvents.filter((event) => {
+      const eventStart = new Date(event.start_time);
+      return eventStart >= dateStart && eventStart <= dateEnd;
+    });
+  };
+
   const todayTasks = getTasksForDate(currentDate);
+  const todayEvents = getCalendarEventsForDate(currentDate);
   const pendingTasks = todayTasks.filter((t) => t.status === "pending" || t.status === "scheduled");
   const completedTasks = todayTasks.filter((t) => t.status === "completed");
 
@@ -253,6 +277,7 @@ const Schedule = () => {
             ) : (
               <TimelineView
                 tasks={todayTasks}
+                calendarEvents={todayEvents}
                 onDeleteTask={handleDeleteTask}
                 onUpdateStatus={handleUpdateStatus}
                 onEditTask={(task) => {
@@ -277,6 +302,7 @@ const Schedule = () => {
             ) : (
               <CalendarView
                 tasks={tasks}
+                calendarEvents={calendarEvents}
                 currentMonth={currentMonth}
                 onMonthChange={setCurrentMonth}
                 onTaskClick={(task) => {

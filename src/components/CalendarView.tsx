@@ -28,8 +28,19 @@ interface Task {
   color?: string;
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  provider_event_id: string;
+}
+
 interface CalendarViewProps {
   tasks: Task[];
+  calendarEvents: CalendarEvent[];
   currentMonth: Date;
   onMonthChange: (date: Date) => void;
   onTaskClick: (task: Task) => void;
@@ -38,7 +49,7 @@ interface CalendarViewProps {
   onEditTask: (task: Task) => void;
 }
 
-export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick, onDeleteTask, onUpdateStatus, onEditTask }: CalendarViewProps) {
+export function CalendarView({ tasks, calendarEvents, currentMonth, onMonthChange, onTaskClick, onDeleteTask, onUpdateStatus, onEditTask }: CalendarViewProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
@@ -57,6 +68,15 @@ export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick, 
       // Sort by scheduled time, earliest first
       if (!a.scheduled_time || !b.scheduled_time) return 0;
       return a.scheduled_time.localeCompare(b.scheduled_time);
+    });
+  };
+
+  const getEventsForDay = (day: Date) => {
+    return calendarEvents.filter(event => {
+      const eventDate = new Date(event.start_time);
+      return isSameDay(eventDate, day);
+    }).sort((a, b) => {
+      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
     });
   };
 
@@ -95,6 +115,7 @@ export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick, 
         
         {days.map(day => {
           const dayTasks = getTasksForDay(day);
+          const dayEvents = getEventsForDay(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isToday = isSameDay(day, new Date());
           
@@ -105,6 +126,27 @@ export function CalendarView({ tasks, currentMonth, onMonthChange, onTaskClick, 
             >
               <div className="font-semibold mb-1">{format(day, 'd')}</div>
               <div className="space-y-1">
+                {/* Render calendar events first */}
+                {dayEvents.map(event => {
+                  const eventStart = new Date(event.start_time);
+                  const eventEnd = new Date(event.end_time);
+                  return (
+                    <div
+                      key={event.id}
+                      className="cursor-default rounded p-1 text-xs border-l-2 border-purple-500 bg-purple-50"
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-purple-600">📅</span>
+                        <span className="text-xs font-medium">Google Calendar</span>
+                      </div>
+                      <div className="truncate font-medium">{event.title}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {format(eventStart, 'h:mm a')} - {format(eventEnd, 'h:mm a')}
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Render tasks */}
                 {dayTasks.map(task => {
                   const isCompleted = task.status === 'completed';
                   return (

@@ -24,8 +24,19 @@ interface Task {
   color?: string;
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  provider_event_id: string;
+}
+
 interface TimelineViewProps {
   tasks: Task[];
+  calendarEvents: CalendarEvent[];
   onDeleteTask: (taskId: string) => void;
   onUpdateStatus: (taskId: string, status: string) => void;
   onEditTask: (task: Task) => void;
@@ -36,7 +47,7 @@ interface TimelineViewProps {
   downtimeEnd?: string;
 }
 
-export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, onTaskClick, wakeTime = "08:00", bedTime = "22:00", downtimeStart, downtimeEnd }: TimelineViewProps) {
+export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStatus, onEditTask, onTaskClick, wakeTime = "08:00", bedTime = "22:00", downtimeStart, downtimeEnd }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // Generate all 24 hours starting from midnight
@@ -117,6 +128,22 @@ export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, 
             const hourEndMinutes = (hour + 1) * 60;
             
             return taskStartMinutes < hourEndMinutes && taskEndMinutes > hourStartMinutes;
+          });
+
+          // Get calendar events that overlap with this hour slot
+          const overlappingEvents = calendarEvents.filter(event => {
+            const eventStart = new Date(event.start_time);
+            const eventEnd = new Date(event.end_time);
+            const eventStartHour = eventStart.getHours();
+            const eventStartMinute = eventStart.getMinutes();
+            const eventStartMinutes = eventStartHour * 60 + eventStartMinute;
+            const eventEndHour = eventEnd.getHours();
+            const eventEndMinute = eventEnd.getMinutes();
+            const eventEndMinutes = eventEndHour * 60 + eventEndMinute;
+            const hourStartMinutes = hour * 60;
+            const hourEndMinutes = (hour + 1) * 60;
+            
+            return eventStartMinutes < hourEndMinutes && eventEndMinutes > hourStartMinutes;
           });
           
           return (
@@ -231,6 +258,58 @@ export function TimelineView({ tasks, onDeleteTask, onUpdateStatus, onEditTask, 
                               </Button>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+                {/* Render calendar events */}
+                {overlappingEvents.map((event) => {
+                  const eventStart = new Date(event.start_time);
+                  const eventEnd = new Date(event.end_time);
+                  const eventStartHour = eventStart.getHours();
+                  const eventStartMinute = eventStart.getMinutes();
+                  
+                  // Only render if event starts in this hour
+                  if (eventStartHour !== hour) return null;
+                  
+                  const eventStartMinutes = eventStartHour * 60 + eventStartMinute;
+                  const eventEndMinutes = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+                  const durationMinutes = eventEndMinutes - eventStartMinutes;
+                  
+                  const minutesFromHourStart = eventStartMinute;
+                  const topOffset = (minutesFromHourStart / 60) * 80;
+                  const heightPx = (durationMinutes / 60) * 80;
+                  const isSmall = heightPx < 60;
+                  
+                  return (
+                    <Card 
+                      key={event.id} 
+                      className="absolute left-2 right-2 p-2 cursor-default border-2 border-purple-500"
+                      style={{ 
+                        top: `${topOffset}px`, 
+                        height: `${heightPx}px`,
+                        minHeight: '40px',
+                        zIndex: 5,
+                        backgroundColor: '#9333ea10'
+                      }}
+                    >
+                      <div className={`h-full ${isSmall ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 overflow-hidden">
+                            <div className={`font-medium flex items-center gap-1 ${isSmall ? 'text-xs' : 'text-sm'}`}>
+                              <span className="text-purple-600">📅</span>
+                              {event.title}
+                            </div>
+                            {!isSmall && event.location && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                📍 {event.location}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <span>{format(eventStart, 'h:mm a')} - {format(eventEnd, 'h:mm a')}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </Card>
