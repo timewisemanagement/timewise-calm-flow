@@ -130,18 +130,6 @@ The project uses Lovable Cloud, which automatically configures environment varia
 3. Authorize the application
 4. Your calendar events will automatically sync
 
-### Getting AI Scheduling Suggestions
-1. Add tasks to your dashboard
-2. Click "Get AI Suggestions" on the Schedule page
-3. Review AI-generated time slots
-4. Accept or modify suggestions as needed
-
-### Syncing Canvas Assignments
-1. Go to Profile settings
-2. Enter your Canvas API credentials
-3. Click "Sync Canvas"
-4. Assignments will import automatically
-
 ## 🎨 Design Philosophy
 
 This application follows a comprehensive design system with semantic color tokens, ensuring consistency across all components. The UI adapts seamlessly to light and dark modes, providing an optimal viewing experience in any lighting condition.
