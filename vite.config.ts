@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  // Set base to './' for Electron compatibility
-  base: process.env.ELECTRON ? './' : '/',
+  // Use relative paths for Electron compatibility
+  base: './',
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
