@@ -221,14 +221,11 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         }
       }
 
-      // Determine if AI should be triggered
-      const hasSpecificDateTime = taskToCreate.scheduled_date && taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
-      const hasOnlyDate = taskToCreate.scheduled_date && !taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
-      const hasNoScheduling = !taskToCreate.scheduled_date && !taskToCreate.scheduled_time && taskToCreate.recurrence_pattern === 'once';
+
+      // Determine task creation patterns
       const isRecurringWithTime = (taskToCreate.recurrence_pattern === 'daily' || taskToCreate.recurrence_pattern === 'weekly') && taskToCreate.scheduled_time;
       const isRecurringWithoutTime = (taskToCreate.recurrence_pattern === 'daily' || taskToCreate.recurrence_pattern === 'weekly') && !taskToCreate.scheduled_time;
-      
-      const shouldTriggerAI = hasOnlyDate || hasNoScheduling || isRecurringWithoutTime;
+
 
       // Handle recurring tasks with specific time - create multiple instances
       if (isRecurringWithTime) {
@@ -413,8 +410,22 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       }
 
       // Create single task
-      // Always set status to 'scheduled' - AI handles incomplete schedules
-      const taskStatus = 'scheduled';
+      // If no date/time provided, assign tomorrow at wake time as default
+      let finalDate = taskToCreate.scheduled_date;
+      let finalTime = taskToCreate.scheduled_time;
+      
+      if (!finalDate || !finalTime) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(8, 0, 0, 0); // Default to 8 AM
+        
+        if (!finalDate) {
+          finalDate = tomorrow.toISOString().split('T')[0];
+        }
+        if (!finalTime) {
+          finalTime = '08:00:00';
+        }
+      }
       
       const { error } = await supabase.from('tasks').insert({
         user_id: user.id,
@@ -423,45 +434,17 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         duration_minutes: taskToCreate.duration_minutes,
         priority: taskToCreate.priority,
         tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
-        scheduled_date: taskToCreate.scheduled_date || null,
-        scheduled_time: taskToCreate.scheduled_time || null,
+        scheduled_date: finalDate,
+        scheduled_time: finalTime,
         commute_minutes: taskToCreate.commute_minutes,
         recurrence_pattern: taskToCreate.recurrence_pattern,
         recurrence_days: taskToCreate.recurrence_days,
         recurrence_end_date: taskToCreate.recurrence_end_date || null,
-        status: taskStatus,
+        status: 'scheduled',
       });
 
       if (error) throw error;
-
-      // Auto-trigger AI scheduling if needed (no date/time provided)
-      if (shouldTriggerAI) {
-        toast.info('AI is scheduling your task...');
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const { data, error: invokeError } = await supabase.functions.invoke('generate-suggestions', {
-            headers: {
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-          });
-          
-          if (invokeError) {
-            console.error('AI scheduling error:', invokeError);
-            toast.error('Task created but AI scheduling failed. Check Profile to manually schedule.');
-          } else {
-            console.log('AI scheduling completed, waiting for DB sync...');
-            // Wait for DB updates to propagate before refreshing UI
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            console.log('DB sync complete, refreshing UI');
-            toast.success('Task created and scheduled by AI!');
-          }
-        } catch (aiError) {
-          console.error('AI scheduling error:', aiError);
-          toast.error('Task created but AI scheduling failed. Check Profile to manually schedule.');
-        }
-      } else {
-        toast.success('Task created!');
-      }
+      toast.success('Task created successfully!');
 
       setNewTask({
         title: '',
