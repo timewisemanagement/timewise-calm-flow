@@ -62,10 +62,44 @@ const Schedule = () => {
   const [showRecurringDeleteDialog, setShowRecurringDeleteDialog] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
+  // Auto-sync Google Calendar on mount if connected and not synced recently
+  const syncGoogleCalendar = async () => {
+    if (!userProfile?.google_calendar_connected) return;
+    
+    // Only sync if last sync was more than 5 minutes ago or never synced
+    const lastSync = userProfile.google_calendar_last_sync;
+    if (lastSync) {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      if (new Date(lastSync) > fiveMinutesAgo) {
+        return; // Skip sync, too recent
+      }
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.functions.invoke('sync-google-calendar', {
+        body: { userId: user.id }
+      });
+      
+      // Refresh calendar events after sync
+      await fetchTasks();
+    } catch (error) {
+      console.error('Auto-sync failed:', error);
+    }
+  };
+
   useEffect(() => {
     checkAuth();
     fetchTasks();
   }, []);
+
+  useEffect(() => {
+    if (userProfile) {
+      syncGoogleCalendar();
+    }
+  }, [userProfile?.google_calendar_connected]);
 
   const checkAuth = async () => {
     const {
