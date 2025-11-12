@@ -55,40 +55,42 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Get user's Google Calendar credentials from profile
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
-      .eq('id', user.id)
+    // Get user's Google Calendar OAuth tokens from secure table
+    const { data: tokens, error: tokensError } = await supabaseClient
+      .from('oauth_tokens')
+      .select('access_token, refresh_token, token_expires_at')
+      .eq('user_id', user.id)
+      .eq('provider', 'google_calendar')
       .single();
 
-    if (profileError || !profile) {
-      throw new Error('Profile not found');
-    }
-
-    if (!profile.google_calendar_refresh_token) {
+    if (tokensError || !tokens) {
       throw new Error('Google Calendar not connected');
     }
 
-    let accessToken = profile.google_calendar_access_token;
-    const expiresAt = profile.google_calendar_token_expires_at;
+    if (!tokens.refresh_token) {
+      throw new Error('Google Calendar not connected');
+    }
+
+    let accessToken = tokens.access_token;
+    const expiresAt = tokens.token_expires_at;
 
     // Check if token needs refresh
     if (!accessToken || new Date(expiresAt) <= new Date()) {
       const { accessToken: newToken, expiresAt: newExpiresAt } = await refreshAccessToken(
-        profile.google_calendar_refresh_token
+        tokens.refresh_token
       );
 
       accessToken = newToken;
 
-      // Update profile with new token
+      // Update tokens in secure table
       await supabaseClient
-        .from('profiles')
+        .from('oauth_tokens')
         .update({
-          google_calendar_access_token: newToken,
-          google_calendar_token_expires_at: newExpiresAt,
+          access_token: newToken,
+          token_expires_at: newExpiresAt,
         })
-        .eq('id', user.id);
+        .eq('user_id', user.id)
+        .eq('provider', 'google_calendar');
     }
 
     // Fetch calendar events from Google Calendar API

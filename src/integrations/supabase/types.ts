@@ -59,14 +59,44 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_tokens: {
+        Row: {
+          access_token: string | null
+          created_at: string | null
+          id: string
+          provider: string
+          refresh_token: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string | null
+          id?: string
+          provider: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string | null
+          id?: string
+          provider?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           bed_time: string | null
-          canvas_access_token: string | null
           canvas_connected: boolean | null
           canvas_last_sync: string | null
-          canvas_refresh_token: string | null
-          canvas_token_expires_at: string | null
           canvas_url: string | null
           color_scheme: string | null
           created_at: string | null
@@ -75,12 +105,9 @@ export type Database = {
           email: string
           first_name: string | null
           focus_preference: string | null
-          google_calendar_access_token: string | null
           google_calendar_connected: boolean | null
           google_calendar_email: string | null
           google_calendar_last_sync: string | null
-          google_calendar_refresh_token: string | null
-          google_calendar_token_expires_at: string | null
           id: string
           ideal_focus_duration: number | null
           last_name: string | null
@@ -91,11 +118,8 @@ export type Database = {
         }
         Insert: {
           bed_time?: string | null
-          canvas_access_token?: string | null
           canvas_connected?: boolean | null
           canvas_last_sync?: string | null
-          canvas_refresh_token?: string | null
-          canvas_token_expires_at?: string | null
           canvas_url?: string | null
           color_scheme?: string | null
           created_at?: string | null
@@ -104,12 +128,9 @@ export type Database = {
           email: string
           first_name?: string | null
           focus_preference?: string | null
-          google_calendar_access_token?: string | null
           google_calendar_connected?: boolean | null
           google_calendar_email?: string | null
           google_calendar_last_sync?: string | null
-          google_calendar_refresh_token?: string | null
-          google_calendar_token_expires_at?: string | null
           id: string
           ideal_focus_duration?: number | null
           last_name?: string | null
@@ -120,11 +141,8 @@ export type Database = {
         }
         Update: {
           bed_time?: string | null
-          canvas_access_token?: string | null
           canvas_connected?: boolean | null
           canvas_last_sync?: string | null
-          canvas_refresh_token?: string | null
-          canvas_token_expires_at?: string | null
           canvas_url?: string | null
           color_scheme?: string | null
           created_at?: string | null
@@ -133,12 +151,9 @@ export type Database = {
           email?: string
           first_name?: string | null
           focus_preference?: string | null
-          google_calendar_access_token?: string | null
           google_calendar_connected?: boolean | null
           google_calendar_email?: string | null
           google_calendar_last_sync?: string | null
-          google_calendar_refresh_token?: string | null
-          google_calendar_token_expires_at?: string | null
           id?: string
           ideal_focus_duration?: number | null
           last_name?: string | null

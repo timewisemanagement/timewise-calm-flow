@@ -140,21 +140,36 @@ serve(async (req) => {
       // Calculate token expiration
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-      // Store tokens in user profile
-      const { error: updateError } = await supabaseClient
+      // Store tokens in secure oauth_tokens table
+      const { error: tokensError } = await supabaseClient
+        .from('oauth_tokens')
+        .upsert({
+          user_id: userId,
+          provider: 'google_calendar',
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          token_expires_at: expiresAt,
+        }, {
+          onConflict: 'user_id,provider'
+        });
+
+      if (tokensError) {
+        console.error('OAuth tokens save error:', tokensError);
+        throw new Error('Failed to save Google Calendar credentials');
+      }
+
+      // Update profile with connection status and email
+      const { error: profileError } = await supabaseClient
         .from('profiles')
         .update({
-          google_calendar_access_token: tokens.access_token,
-          google_calendar_refresh_token: tokens.refresh_token,
-          google_calendar_token_expires_at: expiresAt,
           google_calendar_connected: true,
           google_calendar_email: googleEmail,
         })
         .eq('id', userId);
 
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-        throw new Error('Failed to save Google Calendar credentials');
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw new Error('Failed to update profile');
       }
 
       // Immediately sync calendar events after connection

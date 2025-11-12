@@ -232,19 +232,26 @@ const Profile = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
+      // Delete OAuth tokens from secure table
+      const { error: tokensError } = await supabase
+        .from("oauth_tokens")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("provider", "google_calendar");
+
+      if (tokensError) throw tokensError;
+
+      // Update profile connection status
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({
           google_calendar_connected: false,
-          google_calendar_access_token: null,
-          google_calendar_refresh_token: null,
-          google_calendar_token_expires_at: null,
           google_calendar_last_sync: null,
           google_calendar_email: null,
         })
         .eq("id", user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       toast.success("Google Calendar disconnected");
       fetchProfile();
