@@ -20,11 +20,6 @@ This platform revolutionizes how you manage tasks and schedules by leveraging ar
 - **Real-Time Event Display**: Calendar events appear directly on your schedule timeline
 - **OAuth 2.0 Security**: Secure authentication with automatic token refresh
 
-### 📚 Canvas LMS Integration
-- **Automatic Assignment Import**: Sync assignments directly from Canvas
-- **Deadline Tracking**: Automatically track assignment due dates
-- **Course Organization**: Organize tasks by course and assignment type
-
 ### 📊 Advanced Scheduling Views
 - **Timeline View**: Hourly breakdown of your day with visual task and event representation
 - **Calendar View**: Monthly overview with task and event visualization
