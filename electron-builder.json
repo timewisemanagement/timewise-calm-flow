@@ -17,7 +17,7 @@
         "arch": ["x64"]
       }
     ],
-    "icon": "public/favicon.ico"
+    "icon": "public/icon.png"
   },
   "nsis": {
     "oneClick": false,
@@ -27,10 +27,10 @@
   },
   "mac": {
     "target": "dmg",
-    "icon": "public/favicon.ico"
+    "icon": "public/icon.png"
   },
   "linux": {
     "target": "AppImage",
-    "icon": "public/favicon.ico"
+    "icon": "public/icon.png"
   }
 }
