@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       currentTime: now.toISOString(),
     };
 
-    // Call AI to generate suggestions
+    // Call AI to generate suggestions using tool calling for structured output
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -154,17 +154,6 @@ PREFERENCES:
 - Prioritize high-priority tasks for better time slots
 - Current time: ${context.currentTime}
 
-OUTPUT JSON (return ONLY the JSON array for UNSCHEDULED tasks):
-[
-  {
-    "task_id": "uuid",
-    "suggested_start": "2025-10-22T09:00:00Z",
-    "duration_minutes": 60,
-    "score": 0.95,
-    "reasoning": "No conflicts with scheduled tasks, fits user's morning preference"
-  }
-]
-
 Return suggestions ONLY for unscheduled tasks. DO NOT include scheduled tasks in your output.`
           },
           {
@@ -178,8 +167,39 @@ Calendar Events (FIXED - work around these): ${JSON.stringify(context.calendarEv
 Find optimal time slots for the unscheduled tasks while avoiding all conflicts with scheduled tasks and calendar events.`
           }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "schedule_tasks",
+              description: "Schedule unscheduled tasks in optimal time slots",
+              parameters: {
+                type: "object",
+                properties: {
+                  suggestions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        task_id: { type: "string", description: "UUID of the task" },
+                        suggested_start: { type: "string", description: "ISO 8601 datetime when task should start" },
+                        duration_minutes: { type: "integer", description: "Duration in minutes" },
+                        score: { type: "number", description: "Confidence score 0-1" },
+                        reasoning: { type: "string", description: "Why this time slot was chosen" }
+                      },
+                      required: ["task_id", "suggested_start", "duration_minutes", "score", "reasoning"],
+                      additionalProperties: false
+                    }
+                  }
+                },
+                required: ["suggestions"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "schedule_tasks" } },
         temperature: 0.7,
-        max_tokens: 2000,
       }),
     });
 
@@ -188,29 +208,22 @@ Find optimal time slots for the unscheduled tasks while avoiding all conflicts w
     }
 
     const aiData = await aiResponse.json();
-    const aiContent = aiData.choices[0].message.content;
     
     console.log('AI scheduling response received');
     
-    // Parse AI response
-    let suggestions;
+    // Extract suggestions from tool call
+    let suggestions = [];
     try {
-      // Remove markdown code blocks if present
-      let cleanedContent = aiContent.trim();
-      if (cleanedContent.startsWith('```')) {
-        // Remove opening ```json or ``` and closing ```
-        cleanedContent = cleanedContent.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
-      }
-      
-      // Extract JSON array from response
-      const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        suggestions = JSON.parse(jsonMatch[0]);
+      const toolCalls = aiData.choices[0].message.tool_calls;
+      if (toolCalls && toolCalls.length > 0) {
+        const functionCall = toolCalls[0].function;
+        const args = JSON.parse(functionCall.arguments);
+        suggestions = args.suggestions || [];
       } else {
-        suggestions = JSON.parse(cleanedContent);
+        console.error('No tool calls in AI response');
       }
     } catch (e) {
-      console.error('Failed to parse AI response:', e);
+      console.error('Failed to extract suggestions from AI response:', e);
       suggestions = [];
     }
 
