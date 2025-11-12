@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       throw new Error('Invalid user token');
     }
 
-    console.log(`Generating suggestions for user: ${user.id}`);
+    console.log('Generating task scheduling suggestions');
 
     // Fetch user's profile
     const { data: profile } = await supabase
@@ -190,7 +190,7 @@ Find optimal time slots for the unscheduled tasks while avoiding all conflicts w
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices[0].message.content;
     
-    console.log('AI Response:', aiContent);
+    console.log('AI scheduling response received');
     
     // Parse AI response
     let suggestions;
@@ -263,7 +263,7 @@ Find optimal time slots for the unscheduled tasks while avoiding all conflicts w
       }
     }
 
-    console.log(`Scheduled ${insertData.length} unscheduled tasks`);
+    console.log(`Task scheduling completed: ${insertData.length} tasks scheduled`);
 
     return new Response(
       JSON.stringify({ 

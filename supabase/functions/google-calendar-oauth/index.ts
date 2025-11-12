@@ -61,7 +61,7 @@ serve(async (req) => {
       const code = url.searchParams.get('code');
       const state = url.searchParams.get('state');
 
-      console.log('Callback received - code:', !!code, 'state:', state);
+      console.log('OAuth callback received');
 
       if (!code) {
         throw new Error('No authorization code received');
@@ -80,7 +80,7 @@ serve(async (req) => {
         const stateData = JSON.parse(state);
         userId = stateData.userId;
         appOrigin = stateData.appOrigin;
-        console.log('Parsed state - userId:', userId, 'appOrigin:', appOrigin);
+        console.log('OAuth state parsed successfully');
       } catch (e) {
         console.error('Failed to parse state:', e, 'Raw state:', state);
         throw new Error('User authentication required - invalid state format');
@@ -129,7 +129,7 @@ serve(async (req) => {
       if (userInfoResponse.ok) {
         const userInfo = await userInfoResponse.json();
         googleEmail = userInfo.email;
-        console.log('Fetched Google email:', googleEmail);
+        console.log('Google account information retrieved');
       }
       
       const supabaseClient = createClient(
@@ -214,7 +214,7 @@ serve(async (req) => {
             await supabaseClient.from('calendar_events').insert(newEvents);
           }
 
-          console.log(`Initial sync: imported ${newEvents.length} calendar events`);
+          console.log(`Initial calendar sync completed: ${newEvents.length} events`);
         }
       } catch (syncError) {
         console.error('Initial calendar sync error:', syncError);
