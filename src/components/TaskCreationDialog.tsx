@@ -410,6 +410,10 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       }
 
       // Create single task
+      // If both date AND time are provided, set status to 'scheduled' (user manually scheduled)
+      // Otherwise set to 'pending' (AI will schedule it)
+      const taskStatus = (taskToCreate.scheduled_date && taskToCreate.scheduled_time) ? 'scheduled' : 'pending';
+      
       const { error } = await supabase.from('tasks').insert({
         user_id: user.id,
         title: taskToCreate.title,
@@ -423,7 +427,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
         recurrence_pattern: taskToCreate.recurrence_pattern,
         recurrence_days: taskToCreate.recurrence_days,
         recurrence_end_date: taskToCreate.recurrence_end_date || null,
-        status: 'pending',
+        status: taskStatus,
       });
 
       if (error) throw error;
