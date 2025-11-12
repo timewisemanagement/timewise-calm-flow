@@ -92,11 +92,14 @@ serve(async (req) => {
     }
 
     // Fetch calendar events from Google Calendar API
-    const now = new Date().toISOString();
+    // Fetch events from 30 days ago to 90 days in the future
+    const timeMin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // Last 30 days
     const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(); // Next 90 days
 
+    console.log(`Fetching events from ${timeMin} to ${timeMax}`);
+
     const calendarResponse = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -112,6 +115,8 @@ serve(async (req) => {
 
     const calendarData = await calendarResponse.json();
     const events = calendarData.items || [];
+    
+    console.log(`Found ${events.length} total events from Google Calendar`);
 
     // Check existing calendar events to avoid duplicates
     const { data: existingEvents } = await supabaseClient
