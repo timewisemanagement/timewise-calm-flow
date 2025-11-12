@@ -6,11 +6,13 @@ interface Task {
   scheduled_time?: string | null;
   start_time?: string | null;
   color?: string;
+  status?: string;
 }
 
 interface CalendarEvent {
   id: string;
   start_time: string;
+  attended?: boolean;
 }
 
 interface MiniCalendarProps {
@@ -96,15 +98,21 @@ export function MiniCalendar({ tasks, calendarEvents = [], currentMonth, onClick
                   ]
                     .sort((a, b) => a.time - b.time)
                     .slice(0, 3)
-                    .map((item, i) => (
-                      <div
-                        key={`${item.type}-${i}`}
-                        className="w-1 h-1 rounded-full"
-                        style={{
-                          backgroundColor: item.type === 'event' ? '#a855f7' : (item.data as Task).color || '#3b82f6',
-                        }}
-                      />
-                    ))}
+                    .map((item, i) => {
+                      const isDimmed = item.type === 'event' 
+                        ? (item.data as CalendarEvent).attended 
+                        : (item.data as Task).status === 'completed';
+                      return (
+                        <div
+                          key={`${item.type}-${i}`}
+                          className="w-1 h-1 rounded-full"
+                          style={{
+                            backgroundColor: item.type === 'event' ? '#a855f7' : (item.data as Task).color || '#3b82f6',
+                            opacity: isDimmed ? 0.3 : 1,
+                          }}
+                        />
+                      );
+                    })}
                 </div>
               )}
             </div>
