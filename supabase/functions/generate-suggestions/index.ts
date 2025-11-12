@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('user_id', user.id)
       .is('deleted_at', null)  // Only fetch non-deleted tasks
-      .in('status', ['pending', 'scheduled'])
+      .eq('status', 'scheduled')  // Only scheduled tasks (no pending status exists)
       .order('priority', { ascending: false });
 
     if (!allTasks || allTasks.length === 0) {

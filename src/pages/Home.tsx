@@ -138,7 +138,7 @@ const Home = () => {
 
   const handleToggleTaskComplete = async (taskId: string, currentStatus: string) => {
     try {
-      const newStatus = currentStatus === "completed" ? "pending" : "completed";
+      const newStatus = currentStatus === "completed" ? "scheduled" : "completed";
       const { error } = await supabase
         .from("tasks")
         .update({ status: newStatus })

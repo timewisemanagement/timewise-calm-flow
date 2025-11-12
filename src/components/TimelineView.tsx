@@ -235,9 +235,9 @@ export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStat
                                 className="h-7 w-7 p-0"
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
-                                  onUpdateStatus(task.id, isCompleted ? 'pending' : 'completed'); 
+                                  onUpdateStatus(task.id, isCompleted ? 'scheduled' : 'completed'); 
                                 }}
-                                title={isCompleted ? "Mark as pending" : "Mark as completed"}
+                                title={isCompleted ? "Mark as scheduled" : "Mark as completed"}
                               >
                                 {isCompleted ? (
                                   <CheckCircle2 className="h-4 w-4 text-primary" />

@@ -147,7 +147,7 @@ export function TaskDetailsDialog({ task, open, onOpenChange, onEdit, onDelete, 
             <div>
               <p className="font-medium mb-1">Status</p>
               <Badge variant={isCompleted ? "default" : "outline"}>
-                {isCompleted ? 'Completed' : 'Pending'}
+                {isCompleted ? 'Completed' : 'Scheduled'}
               </Badge>
             </div>
           </div>
@@ -160,7 +160,7 @@ export function TaskDetailsDialog({ task, open, onOpenChange, onEdit, onDelete, 
             </Button>
           )}
           {isCompleted && onUpdateStatus && (
-            <Button variant="outline" onClick={() => onUpdateStatus(task.id, 'pending')}>
+            <Button variant="outline" onClick={() => onUpdateStatus(task.id, 'scheduled')}>
               Undo Completion
             </Button>
           )}

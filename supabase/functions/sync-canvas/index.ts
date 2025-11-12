@@ -136,7 +136,7 @@ serve(async (req) => {
             duration_minutes: 60, // Default duration
             priority: 'medium',
             tags: ['canvas', 'homework'],
-            status: 'pending',
+            status: 'scheduled',  // Always scheduled (no pending status)
             scheduled_date: assignment.due_at ? new Date(assignment.due_at).toISOString().split('T')[0] : null,
             color: '#dc2626', // Red color for homework
           });

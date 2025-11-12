@@ -332,7 +332,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
               duration_minutes: taskToCreate.duration_minutes,
               priority: taskToCreate.priority,
               tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
-              status: 'pending',  // Pending because AI needs to schedule
+              status: 'scheduled',  // AI will schedule the time
               scheduled_date: null,  // AI will set this
               scheduled_time: null,  // AI will set this
               commute_minutes: taskToCreate.commute_minutes,
@@ -353,7 +353,7 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
                 duration_minutes: taskToCreate.duration_minutes,
                 priority: taskToCreate.priority,
                 tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
-                status: 'pending',  // Pending because AI needs to schedule
+                status: 'scheduled',  // AI will schedule the time
                 scheduled_date: null,  // AI will set this
                 scheduled_time: null,  // AI will set this
                 commute_minutes: taskToCreate.commute_minutes,
@@ -413,9 +413,8 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       }
 
       // Create single task
-      // If both date AND time are provided, set status to 'scheduled' (user manually scheduled)
-      // Otherwise set to 'pending' (AI will schedule it)
-      const taskStatus = (taskToCreate.scheduled_date && taskToCreate.scheduled_time) ? 'scheduled' : 'pending';
+      // Always set status to 'scheduled' - AI handles incomplete schedules
+      const taskStatus = 'scheduled';
       
       const { error } = await supabase.from('tasks').insert({
         user_id: user.id,

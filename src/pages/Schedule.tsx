@@ -282,7 +282,7 @@ const Schedule = () => {
 
   const todayTasks = getTasksForDate(currentDate);
   const todayEvents = getCalendarEventsForDate(currentDate);
-  const pendingTasks = todayTasks.filter((t) => t.status === "pending" || t.status === "scheduled");
+  const pendingTasks = todayTasks.filter((t) => t.status === "scheduled");
   const completedTasks = todayTasks.filter((t) => t.status === "completed");
 
   return (
