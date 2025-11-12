@@ -33,6 +33,23 @@ Deno.serve(async (req) => {
       throw new Error('Invalid state parameter');
     }
 
+    // Validate userId is a valid UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(userId)) {
+      throw new Error('Invalid userId format');
+    }
+
+    // Validate appOrigin is from an allowed domain
+    const allowedOrigins = [
+      Deno.env.get('APP_ORIGIN'),
+      'http://localhost:5173',
+      'http://localhost:8080',
+    ].filter(Boolean);
+    
+    if (!allowedOrigins.includes(appOrigin)) {
+      throw new Error('Invalid origin domain');
+    }
+
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI');
