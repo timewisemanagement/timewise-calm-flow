@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
+import { taskSchema } from "@/lib/validationSchemas";
+import { toast } from "sonner";
 
 interface Task {
   id: string;
@@ -37,9 +39,33 @@ export function TaskEditDialog({ task, open, onOpenChange, onSave }: TaskEditDia
   if (!task) return null;
 
   const handleSave = () => {
-    onSave(task.id, editedTask);
-    onOpenChange(false);
-    setEditedTask({});
+    try {
+      const validationData = {
+        title: getValue('title') as string,
+        description: (getValue('description') as string) || undefined,
+        duration_minutes: task.duration_minutes,
+        priority: getValue('priority') as string,
+        tags: task.tags,
+        status: task.status,
+        scheduled_date: (getValue('scheduled_date') as string) || undefined,
+        scheduled_time: (getValue('scheduled_time') as string) || undefined,
+        start_time: (getValue('start_time') as string) || undefined,
+        end_time: (getValue('end_time') as string) || undefined,
+        commute_minutes: getValue('commute_minutes') as number,
+      };
+
+      const result = taskSchema.safeParse(validationData);
+      if (!result.success) {
+        toast.error(result.error.errors[0].message);
+        return;
+      }
+
+      onSave(task.id, editedTask);
+      onOpenChange(false);
+      setEditedTask({});
+    } catch (error) {
+      toast.error('Validation failed');
+    }
   };
 
   const getValue = (field: keyof Task) => {
