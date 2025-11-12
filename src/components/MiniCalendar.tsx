@@ -6,13 +6,19 @@ interface Task {
   color?: string;
 }
 
+interface CalendarEvent {
+  id: string;
+  start_time: string;
+}
+
 interface MiniCalendarProps {
   tasks: Task[];
+  calendarEvents?: CalendarEvent[];
   currentMonth: Date;
   onClick: () => void;
 }
 
-export function MiniCalendar({ tasks, currentMonth, onClick }: MiniCalendarProps) {
+export function MiniCalendar({ tasks, calendarEvents = [], currentMonth, onClick }: MiniCalendarProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
@@ -26,6 +32,13 @@ export function MiniCalendar({ tasks, currentMonth, onClick }: MiniCalendarProps
       const [year, month, dayNum] = task.scheduled_date.split('-').map(Number);
       const taskDate = new Date(year, month - 1, dayNum);
       return isSameDay(taskDate, day);
+    });
+  };
+
+  const getEventsForDay = (day: Date) => {
+    return calendarEvents.filter(event => {
+      const eventDate = new Date(event.start_time);
+      return isSameDay(eventDate, day);
     });
   };
 
@@ -47,6 +60,7 @@ export function MiniCalendar({ tasks, currentMonth, onClick }: MiniCalendarProps
         
         {days.map(day => {
           const dayTasks = getTasksForDay(day);
+          const dayEvents = getEventsForDay(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isToday = isSameDay(day, new Date());
           
@@ -60,11 +74,18 @@ export function MiniCalendar({ tasks, currentMonth, onClick }: MiniCalendarProps
               `}
             >
               <div>{format(day, 'd')}</div>
-              {dayTasks.length > 0 && (
+              {(dayTasks.length > 0 || dayEvents.length > 0) && (
                 <div className="flex justify-center gap-0.5 mt-0.5">
-                  {dayTasks.slice(0, 3).map((task, i) => (
+                  {dayEvents.slice(0, 3).map((event, i) => (
                     <div
-                      key={i}
+                      key={`event-${i}`}
+                      className="w-1 h-1 rounded-full"
+                      style={{ backgroundColor: '#a855f7' }}
+                    />
+                  ))}
+                  {dayTasks.slice(0, 3 - dayEvents.length).map((task, i) => (
+                    <div
+                      key={`task-${i}`}
                       className="w-1 h-1 rounded-full"
                       style={{ backgroundColor: task.color || '#3b82f6' }}
                     />

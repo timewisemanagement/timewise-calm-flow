@@ -23,9 +23,20 @@ interface Task {
   duration_minutes: number;
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  provider_event_id: string;
+}
+
 const Home = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -50,7 +61,7 @@ const Home = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [tasksResult, profileResult] = await Promise.all([
+      const [tasksResult, profileResult, eventsResult] = await Promise.all([
         supabase
           .from("tasks")
           .select("*")
@@ -59,12 +70,18 @@ const Home = () => {
           .order("scheduled_date", { ascending: true })
           .order("scheduled_time", { ascending: true }),
         supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase
+          .from("calendar_events")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("start_time", { ascending: true }),
       ]);
 
       if (tasksResult.error) throw tasksResult.error;
       if (profileResult.error) throw profileResult.error;
 
       setTasks(tasksResult.data || []);
+      setCalendarEvents(eventsResult.data || []);
       setUserProfile(profileResult.data);
     } catch (error: any) {
       toast.error(error.message || "Failed to fetch data");
@@ -86,6 +103,11 @@ const Home = () => {
     return isSameDay(taskDate, new Date());
   });
 
+  const todayEvents = calendarEvents.filter((event) => {
+    const eventDate = new Date(event.start_time);
+    return isSameDay(eventDate, new Date());
+  });
+
   const weekStart = startOfWeek(new Date());
   const weekEnd = endOfWeek(new Date());
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -95,6 +117,13 @@ const Home = () => {
       if (!task.scheduled_date) return false;
       const taskDate = parseISO(task.scheduled_date);
       return isSameDay(taskDate, day);
+    });
+  };
+
+  const getEventsForDay = (day: Date) => {
+    return calendarEvents.filter((event) => {
+      const eventDate = new Date(event.start_time);
+      return isSameDay(eventDate, day);
     });
   };
 
@@ -186,6 +215,7 @@ const Home = () => {
             <div className="grid grid-cols-7 gap-2">
               {weekDays.map((day) => {
                 const dayTasks = getTasksForDay(day);
+                const dayEvents = getEventsForDay(day);
                 const isToday = isSameDay(day, new Date());
                 return (
                   <div
@@ -197,7 +227,20 @@ const Home = () => {
                       <div className={`text-lg font-semibold ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</div>
                     </div>
                     <div className="space-y-1">
-                      {dayTasks.slice(0, 3).map((task) => (
+                      {dayEvents.slice(0, 3).map((event) => (
+                        <div
+                          key={event.id}
+                          className="text-xs truncate px-1 py-0.5 rounded border-l-2 border-purple-500"
+                          style={{
+                            backgroundColor: "hsl(var(--purple) / 0.1)",
+                            color: "hsl(var(--purple))",
+                          }}
+                          title={event.title}
+                        >
+                          {event.title}
+                        </div>
+                      ))}
+                      {dayTasks.slice(0, 3 - dayEvents.length).map((task) => (
                         <div
                           key={task.id}
                           className="text-xs truncate px-1 py-0.5 rounded"
@@ -210,8 +253,10 @@ const Home = () => {
                           {task.title}
                         </div>
                       ))}
-                      {dayTasks.length > 3 && (
-                        <div className="text-xs text-center text-muted-foreground">+{dayTasks.length - 3}</div>
+                      {dayTasks.length + dayEvents.length > 3 && (
+                        <div className="text-xs text-center text-muted-foreground">
+                          +{dayTasks.length + dayEvents.length - 3}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -235,7 +280,7 @@ const Home = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {todayTasks.length === 0 ? (
+                {todayTasks.length === 0 && todayEvents.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No tasks for today. Enjoy your free time!</p>
                     <Button variant="outline" className="mt-4" onClick={() => navigate("/schedule")}>
@@ -243,35 +288,81 @@ const Home = () => {
                     </Button>
                   </div>
                 ) : (
-                  todayTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => navigate("/schedule")}
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
-                        style={{ backgroundColor: task.color || "#3b82f6" }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className={`font-medium ${task.status === "completed" ? "line-through opacity-60" : ""}`}>
-                          {task.title}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                          {task.start_time && task.end_time ? (
-                            <span>
-                              {task.start_time} - {task.end_time}
-                            </span>
-                          ) : (
-                            task.scheduled_time && <span>{task.scheduled_time}</span>
-                          )}
-                          <Badge variant="outline" className="text-xs">
-                            {task.priority}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                  <>
+                    {[
+                      ...todayEvents.map((event) => ({
+                        type: "event" as const,
+                        data: event,
+                        time: new Date(event.start_time).getTime(),
+                      })),
+                      ...todayTasks.map((task) => ({
+                        type: "task" as const,
+                        data: task,
+                        time: task.scheduled_time
+                          ? new Date(`2000-01-01T${task.scheduled_time}`).getTime()
+                          : task.start_time
+                          ? new Date(`2000-01-01T${task.start_time}`).getTime()
+                          : 0,
+                      })),
+                    ]
+                      .sort((a, b) => a.time - b.time)
+                      .map((item) => {
+                        if (item.type === "event") {
+                          const event = item.data;
+                          const eventStart = new Date(event.start_time);
+                          const eventEnd = new Date(event.end_time);
+                          return (
+                            <div
+                              key={event.id}
+                              className="flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-purple-500 hover:bg-accent cursor-pointer transition-colors"
+                              onClick={() => navigate("/schedule")}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-purple-600">📅</span>
+                                  <span className="text-xs font-medium text-purple-600">Google Calendar</span>
+                                </div>
+                                <div className="font-medium">{event.title}</div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {format(eventStart, "h:mm a")} - {format(eventEnd, "h:mm a")}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const task = item.data;
+                        return (
+                          <div
+                            key={task.id}
+                            className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+                            onClick={() => navigate("/schedule")}
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
+                              style={{ backgroundColor: task.color || "#3b82f6" }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className={`font-medium ${task.status === "completed" ? "line-through opacity-60" : ""}`}>
+                                {task.title}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                {task.start_time && task.end_time ? (
+                                  <span>
+                                    {task.start_time} - {task.end_time}
+                                  </span>
+                                ) : (
+                                  task.scheduled_time && <span>{task.scheduled_time}</span>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                  {task.priority}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </>
                 )}
               </div>
             </CardContent>
@@ -291,6 +382,7 @@ const Home = () => {
             <CardContent>
               <MiniCalendar
                 tasks={tasks}
+                calendarEvents={calendarEvents}
                 currentMonth={new Date()}
                 onClick={() => navigate("/schedule?view=calendar")}
               />
