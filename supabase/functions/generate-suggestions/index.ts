@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       currentTime: now.toISOString(),
     };
 
-    // Use tool calling for reliable structured output
+    // Use tool calling for reliable structured output with human-like reasoning
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -131,61 +131,102 @@ Deno.serve(async (req) => {
         model: 'google/gemini-2.5-flash',
         messages: [
           {
+            role: 'system',
+            content: `You are an expert human planner. Schedule tasks where users benefit most.
+
+SCORING RUBRIC (use to evaluate each placement):
++0.4 if slot matches user focus preference and is during prime focus time
++0.25 if slot is on a day with spare time (less than average load)
++0.2 if slot avoids travel/conflict (no calendar events nearby)
+-0.3 if slot is late-night or inside downtime
+Final score normalized to 0–1
+
+PLACEMENT LOGIC (must follow):
+1. NEVER schedule inside downtime or outside wake_time–bed_time
+2. Respect all calendarEvents and scheduledTasks: avoid overlaps, maintain 10min buffer
+3. Prefer user focus_preference for high priority tasks (score ≥ 0.8 for high priority)
+4. Tasks with requested date but no time: place on that day at BEST slot (not noon default)
+5. Tasks without date/time: find next available day within 7 days, balance load (avoid exceeding ideal_focus_duration * 2 per day)
+6. Return highest benefit score and include 1-2 sentence reason for each placement
+
+EDGE CASES: If no conflict-free slot within 7 days, return best-effort with score < 0.5 and explain trade-offs.`
+          },
+          {
             role: 'user',
-            content: `Schedule these ${unscheduledTasks.length} unscheduled tasks into optimal time slots over the next 7 days starting ${now.toISOString()}.
+            content: `Schedule these ${unscheduledTasks.length} unscheduled tasks over next 7 days starting ${now.toISOString()}.
+
+USER PROFILE:
+- Focus preference: ${context.profile.focus_preference || 'morning'}
+- Ideal focus duration: ${context.profile.ideal_focus_duration || 60} minutes
+- Timezone: ${context.profile.timezone || 'UTC'}
+- Wake time: ${context.profile.wake_time || '08:00:00'}
+- Bed time: ${context.profile.bed_time || '22:00:00'}
+${context.profile.downtime_start && context.profile.downtime_end ? `- Downtime: ${context.profile.downtime_start} to ${context.profile.downtime_end}` : '- No downtime configured'}
 
 TASKS TO SCHEDULE:
 ${JSON.stringify(unscheduledTasks.map(t => ({ 
   id: t.id, 
   title: t.title, 
-  duration: t.duration_minutes, 
+  duration_minutes: t.duration_minutes, 
   priority: t.priority,
-  description: t.description 
+  description: t.description,
+  requested_date: t.scheduled_date || null
 })), null, 2)}
 
-CONSTRAINTS:
-- Wake time: ${context.profile.wake_time || '08:00:00'}
-- Bed time: ${context.profile.bed_time || '22:00:00'}
-${context.profile.downtime_start && context.profile.downtime_end ? `- Downtime: ${context.profile.downtime_start} to ${context.profile.downtime_end}` : ''}
-- Leave 10 minutes buffer between tasks
-- High priority tasks should get prime time slots (${context.profile.focus_preference || 'morning'})
-
-AVOID CONFLICTS WITH:
-Scheduled Tasks: ${JSON.stringify(scheduledTasks.map(t => ({ 
+ALREADY SCHEDULED TASKS (avoid conflicts):
+${JSON.stringify(scheduledTasks.map(t => ({ 
   date: t.scheduled_date, 
   time: t.scheduled_time, 
-  duration: t.duration_minutes,
+  duration_minutes: t.duration_minutes,
   title: t.title
-})))}
+})), null, 2)}
 
-Calendar Events: ${JSON.stringify((calendarEvents || []).map(e => ({ 
+CALENDAR EVENTS (avoid conflicts):
+${JSON.stringify((calendarEvents || []).map(e => ({ 
   start: e.start_time, 
   end: e.end_time,
   title: e.title
-})))}
+})), null, 2)}
 
-Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task.`
+Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task with full ISO 8601 datetime (with timezone), score, and reason.`
           }
         ],
         tools: [{
           type: "function",
           function: {
             name: "schedule_tasks",
-            description: "Schedule tasks into optimal time slots",
+            description: "Schedule tasks into optimal time slots with human-like reasoning",
             parameters: {
               type: "object",
               properties: {
                 schedules: {
                   type: "array",
+                  description: "Array of task schedules with placement reasoning",
                   items: {
                     type: "object",
                     properties: {
-                      task_id: { type: "string", description: "UUID of the task" },
-                      suggested_start: { type: "string", description: "ISO 8601 datetime string" },
-                      duration_minutes: { type: "number" },
-                      score: { type: "number", description: "Confidence score 0-1" }
+                      task_id: { 
+                        type: "string", 
+                        description: "UUID of the task to schedule" 
+                      },
+                      suggested_start: { 
+                        type: "string", 
+                        description: "Full ISO 8601 datetime with timezone (e.g., 2025-11-22T14:00:00Z). REQUIRED: Must include time and timezone." 
+                      },
+                      duration_minutes: { 
+                        type: "number",
+                        description: "Duration of the task in minutes"
+                      },
+                      score: { 
+                        type: "number", 
+                        description: "Placement quality score 0-1 based on scoring rubric" 
+                      },
+                      reason: {
+                        type: "string",
+                        description: "1-2 sentence justification for this placement explaining why this slot benefits the user"
+                      }
                     },
-                    required: ["task_id", "suggested_start", "duration_minutes", "score"],
+                    required: ["task_id", "suggested_start", "duration_minutes", "score", "reason"],
                     additionalProperties: false
                   }
                 }
@@ -233,14 +274,34 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task.`
       .eq('user_id', user.id)
       .is('outcome', null);
 
-    // Insert new suggestions and auto-schedule ALL tasks (resolving conflicts)
-    const insertData = suggestions.map((s: any) => ({
-      user_id: user.id,
-      task_id: s.task_id,
-      suggested_start: s.suggested_start,
-      duration_minutes: s.duration_minutes,
-      score: s.score || 0.8,
-    }));
+    // Helper: ensure valid ISO datetime with fallback to 09:00:00
+    const ensureFullISO = (suggested: string, profileTimezone: string): string => {
+      // If date-only like "2025-11-22", add 09:00:00
+      if (/^\d{4}-\d{2}-\d{2}$/.test(suggested)) {
+        console.log(`Date-only format detected: ${suggested}, adding 09:00:00Z`);
+        return `${suggested}T09:00:00Z`;
+      }
+      // If lacks timezone, treat as UTC
+      if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(suggested)) {
+        console.log(`No timezone detected: ${suggested}, adding Z`);
+        return `${suggested}Z`;
+      }
+      return suggested;
+    };
+
+    // Insert new suggestions and auto-schedule ALL tasks
+    const insertData = suggestions.map((s: any) => {
+      const fixedISO = ensureFullISO(s.suggested_start, context.profile.timezone || 'UTC');
+      console.log(`Task ${s.task_id}: original=${s.suggested_start}, fixed=${fixedISO}, reason=${s.reason || 'N/A'}`);
+      
+      return {
+        user_id: user.id,
+        task_id: s.task_id,
+        suggested_start: fixedISO,
+        duration_minutes: s.duration_minutes,
+        score: s.score || 0.8,
+      };
+    });
 
     if (insertData.length > 0) {
       const { error: insertError } = await supabase
@@ -252,7 +313,10 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task.`
       }
 
       // Update ONLY the unscheduled tasks with new schedule
-      for (const suggestion of suggestions) {
+      for (let i = 0; i < suggestions.length; i++) {
+        const suggestion = suggestions[i];
+        const insertItem = insertData[i];
+        
         // Double-check that we're only updating tasks that were unscheduled
         const taskToUpdate = unscheduledTasks.find(t => t.id === suggestion.task_id);
         if (!taskToUpdate) {
@@ -260,9 +324,11 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task.`
           continue;
         }
 
-        const suggestedStart = new Date(suggestion.suggested_start);
-        const scheduledDate = suggestedStart.toISOString().split('T')[0];
-        const scheduledTime = suggestedStart.toISOString().split('T')[1].substring(0, 8); // Include seconds (HH:MM:SS)
+        const suggestedStart = new Date(insertItem.suggested_start);
+        const scheduledDate = suggestedStart.toISOString().slice(0, 10); // YYYY-MM-DD
+        const scheduledTime = suggestedStart.toISOString().slice(11, 19); // HH:MM:SS
+
+        console.log(`Updating task ${suggestion.task_id}: date=${scheduledDate}, time=${scheduledTime}`);
 
         await supabase
           .from('tasks')
