@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       currentTime: now.toISOString(),
     };
 
-    // Call AI to generate suggestions using tool calling for structured output
+    // Call AI with simpler prompt for faster response
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -128,78 +128,28 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           {
-            role: 'system',
-            content: `You are a smart scheduling assistant that finds optimal time slots for unscheduled tasks.
-
-CRITICAL RULES:
-1. NEVER MOVE SCHEDULED TASKS: Tasks with scheduled_date and scheduled_time are FIXED. You cannot move them.
-2. NO OVERLAPS: New tasks cannot overlap with scheduled tasks or calendar events.
-3. BUFFER TIME: Leave at least 10 minutes between all tasks.
-4. COMMUTE TIME: For tasks with commute_minutes > 0, reserve (commute_minutes) time BEFORE and AFTER the task duration.
-5. WAKE/SLEEP: User wakes at ${context.profile.wake_time || '08:00:00'}, sleeps at ${context.profile.bed_time || '22:00:00'}. Never schedule outside this window.
-${context.profile.downtime_start && context.profile.downtime_end ? `6. DOWNTIME: User has downtime ${context.profile.downtime_start} to ${context.profile.downtime_end}. Avoid scheduling during this time unless absolutely necessary.` : ''}
-
-YOUR TASK:
-- Schedule ONLY the unscheduled tasks (those without both date and time)
-- Work AROUND existing scheduled tasks and calendar events - DO NOT move them
-- Find the best available time slots that avoid all conflicts
-- If you cannot fit a task without conflicts, schedule it on the next available day
-
-PREFERENCES:
-- Focus preference: ${context.profile.focus_preference}
-- Ideal focus duration: ${context.profile.ideal_focus_duration} minutes
-- Prioritize high-priority tasks for better time slots
-- Current time: ${context.currentTime}
-
-Return suggestions ONLY for unscheduled tasks. DO NOT include scheduled tasks in your output.`
-          },
-          {
             role: 'user',
-            content: `Unscheduled Tasks (find time slots for these): ${JSON.stringify(context.unscheduledTasks)}
+            content: `You are a scheduling assistant. Schedule these unscheduled tasks optimally.
 
-Scheduled Tasks (FIXED - work around these): ${JSON.stringify(context.scheduledTasks)}
+RULES:
+- Never overlap with scheduled tasks or calendar events
+- Respect wake time (${context.profile.wake_time || '08:00:00'}) and bed time (${context.profile.bed_time || '22:00:00'})
+- Leave 10 minutes between tasks
+- High priority tasks get better time slots
 
-Calendar Events (FIXED - work around these): ${JSON.stringify(context.calendarEvents)}
+Unscheduled tasks: ${JSON.stringify(context.unscheduledTasks.map(t => ({ id: t.id, title: t.title, duration: t.duration_minutes, priority: t.priority })))}
+Scheduled tasks (avoid these times): ${JSON.stringify(context.scheduledTasks.map(t => ({ date: t.scheduled_date, time: t.scheduled_time, duration: t.duration_minutes })))}
+Calendar events (avoid these): ${JSON.stringify(context.calendarEvents.map(e => ({ start: e.start_time, end: e.end_time })))}
 
-Find optimal time slots for the unscheduled tasks while avoiding all conflicts with scheduled tasks and calendar events.`
+Return ONLY a JSON array, no markdown:
+[{"task_id":"uuid","suggested_start":"2025-11-12T09:00:00Z","duration_minutes":60,"score":0.9,"reasoning":"morning slot"}]`
           }
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "schedule_tasks",
-              description: "Schedule unscheduled tasks in optimal time slots",
-              parameters: {
-                type: "object",
-                properties: {
-                  suggestions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        task_id: { type: "string", description: "UUID of the task" },
-                        suggested_start: { type: "string", description: "ISO 8601 datetime when task should start" },
-                        duration_minutes: { type: "integer", description: "Duration in minutes" },
-                        score: { type: "number", description: "Confidence score 0-1" },
-                        reasoning: { type: "string", description: "Why this time slot was chosen" }
-                      },
-                      required: ["task_id", "suggested_start", "duration_minutes", "score", "reasoning"],
-                      additionalProperties: false
-                    }
-                  }
-                },
-                required: ["suggestions"],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "schedule_tasks" } },
-        temperature: 0.7,
+        temperature: 0.3,
+        max_tokens: 1500,
       }),
     });
 
@@ -208,22 +158,28 @@ Find optimal time slots for the unscheduled tasks while avoiding all conflicts w
     }
 
     const aiData = await aiResponse.json();
+    const aiContent = aiData.choices[0].message.content;
     
     console.log('AI scheduling response received');
     
-    // Extract suggestions from tool call
+    // Parse JSON response
     let suggestions = [];
     try {
-      const toolCalls = aiData.choices[0].message.tool_calls;
-      if (toolCalls && toolCalls.length > 0) {
-        const functionCall = toolCalls[0].function;
-        const args = JSON.parse(functionCall.arguments);
-        suggestions = args.suggestions || [];
+      // Clean and extract JSON array
+      let cleaned = aiContent.trim();
+      // Remove markdown code blocks if present
+      cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+      // Extract array
+      const match = cleaned.match(/\[[\s\S]*\]/);
+      if (match) {
+        suggestions = JSON.parse(match[0]);
       } else {
-        console.error('No tool calls in AI response');
+        console.error('No JSON array found in response');
+        suggestions = [];
       }
     } catch (e) {
-      console.error('Failed to extract suggestions from AI response:', e);
+      console.error('Failed to parse AI response:', e);
+      console.error('AI response:', aiContent);
       suggestions = [];
     }
 
