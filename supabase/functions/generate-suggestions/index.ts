@@ -277,11 +277,12 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
       return suggested;
     };
 
-    // Directly schedule tasks - no suggestions table needed
+    // Track which tasks were scheduled by AI
+    const scheduledTaskIds = new Set<string>();
+
+    // Schedule tasks from AI suggestions
     if (suggestions.length > 0) {
-      // Update ONLY the unscheduled tasks with new schedule
       for (const suggestion of suggestions) {
-        // Double-check that we're only updating tasks that were unscheduled
         const taskToUpdate = unscheduledTasks.find((t: any) => t.id === suggestion.task_id);
         if (!taskToUpdate) {
           console.warn(`Skipping update for task ${suggestion.task_id} - not in unscheduled list`);
@@ -290,10 +291,10 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
 
         const fixedISO = ensureFullISO(suggestion.suggested_start, context.profile.timezone || 'UTC');
         const suggestedStart = new Date(fixedISO);
-        const scheduledDate = suggestedStart.toISOString().slice(0, 10); // YYYY-MM-DD
-        const scheduledTime = suggestedStart.toISOString().slice(11, 19); // HH:MM:SS
+        const scheduledDate = suggestedStart.toISOString().slice(0, 10);
+        const scheduledTime = suggestedStart.toISOString().slice(11, 19);
 
-        console.log(`Scheduling task ${suggestion.task_id}: date=${scheduledDate}, time=${scheduledTime}, reason=${suggestion.reason}`);
+        console.log(`AI scheduled task ${suggestion.task_id}: ${scheduledDate} ${scheduledTime}`);
 
         const { error: updateError } = await supabase
           .from('tasks')
@@ -303,22 +304,63 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
             status: 'scheduled'
           })
           .eq('id', suggestion.task_id)
-          .eq('user_id', user.id);  // Extra safety check
+          .eq('user_id', user.id);
 
-        if (updateError) {
-          console.error(`Failed to schedule task ${suggestion.task_id}:`, updateError);
+        if (!updateError) {
+          scheduledTaskIds.add(suggestion.task_id);
+          console.log(`✓ Task ${suggestion.task_id} scheduled by AI`);
         } else {
-          console.log(`✓ Successfully scheduled task ${suggestion.task_id}`);
+          console.error(`Failed to schedule task ${suggestion.task_id}:`, updateError);
         }
       }
     }
 
-    console.log(`Task scheduling completed: ${suggestions.length} tasks scheduled`);
+    // FALLBACK: Schedule any remaining unscheduled tasks (AI missed them)
+    const missedTasks = unscheduledTasks.filter((t: any) => !scheduledTaskIds.has(t.id));
+    if (missedTasks.length > 0) {
+      console.log(`⚠️ AI missed ${missedTasks.length} tasks, applying fallback scheduling`);
+      
+      // Start scheduling from tomorrow morning at wake time
+      let fallbackDate = new Date(now);
+      fallbackDate.setDate(fallbackDate.getDate() + 1);
+      const wakeHour = parseInt((context.profile.wake_time || '08:00:00').slice(0, 2));
+      fallbackDate.setHours(wakeHour, 0, 0, 0);
+
+      for (const task of missedTasks) {
+        const scheduledDate = fallbackDate.toISOString().slice(0, 10);
+        const scheduledTime = fallbackDate.toISOString().slice(11, 19);
+
+        console.log(`Fallback scheduling task ${task.id}: ${scheduledDate} ${scheduledTime}`);
+
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({
+            scheduled_date: scheduledDate,
+            scheduled_time: scheduledTime,
+            status: 'scheduled'
+          })
+          .eq('id', task.id)
+          .eq('user_id', user.id);
+
+        if (!updateError) {
+          scheduledTaskIds.add(task.id);
+          console.log(`✓ Task ${task.id} scheduled by fallback`);
+        }
+
+        // Move to next slot (add task duration + 30min buffer)
+        fallbackDate.setMinutes(fallbackDate.getMinutes() + (task.duration_minutes || 60) + 30);
+      }
+    }
+
+    const totalScheduled = scheduledTaskIds.size;
+    console.log(`Task scheduling completed: ${totalScheduled} tasks scheduled (${suggestions.length} by AI, ${totalScheduled - suggestions.length} by fallback)`);
 
     return new Response(
       JSON.stringify({ 
-        message: `Scheduled ${suggestions.length} tasks`,
-        scheduled: suggestions.length
+        message: `Scheduled ${totalScheduled} tasks`,
+        scheduled: totalScheduled,
+        ai_scheduled: suggestions.length,
+        fallback_scheduled: totalScheduled - suggestions.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
