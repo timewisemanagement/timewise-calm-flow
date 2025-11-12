@@ -362,10 +362,40 @@ const Home = () => {
                           return (
                             <div
                               key={event.id}
-                              className={`flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-purple-500 hover:bg-accent cursor-pointer transition-colors ${event.attended ? 'opacity-50' : ''}`}
-                              onClick={() => navigate("/schedule")}
+                              className={`flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-purple-500 hover:bg-accent transition-colors ${event.attended ? 'opacity-50' : ''}`}
                             >
-                              <div className="flex-1 min-w-0">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    const newAttended = !event.attended;
+                                    const { error } = await supabase
+                                      .from("calendar_events")
+                                      .update({ attended: newAttended })
+                                      .eq("id", event.id);
+
+                                    if (error) throw error;
+
+                                    setCalendarEvents((prev) =>
+                                      prev.map((evt) =>
+                                        evt.id === event.id ? { ...evt, attended: newAttended } : evt
+                                      )
+                                    );
+
+                                    toast.success(newAttended ? "Event marked as attended!" : "Event reopened");
+                                  } catch (error: any) {
+                                    toast.error(error.message || "Failed to update event");
+                                  }
+                                }}
+                                className="flex-shrink-0 mt-0.5"
+                              >
+                                {event.attended ? (
+                                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                                ) : (
+                                  <Circle className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </button>
+                              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate("/schedule")}>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-purple-600">📅</span>
                                   <span className="text-xs font-medium text-purple-600">Google Calendar</span>
