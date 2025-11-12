@@ -152,7 +152,7 @@ const Dashboard = () => {
               <Clock className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Timewise</h1>
+              <h1 className="text-xl font-bold">TimeWiz</h1>
               <p className="text-sm text-muted-foreground">
                 Welcome back, {userProfile?.display_name}
               </p>

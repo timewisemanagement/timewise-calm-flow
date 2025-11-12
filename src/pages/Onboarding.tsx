@@ -62,7 +62,7 @@ const Onboarding = () => {
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl">Welcome to Timewise!</CardTitle>
+          <CardTitle className="text-3xl">Welcome to TimeWiz!</CardTitle>
           <CardDescription className="text-base">
             Let's personalize your experience to maximize your productivity
           </CardDescription>

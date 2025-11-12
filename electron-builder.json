@@ -1,6 +1,6 @@
 {
-  "appId": "com.timewise.calmflow",
-  "productName": "TimeWise Calm Flow",
+  "appId": "com.timewiz.app",
+  "productName": "TimeWiz",
   "directories": {
     "output": "release",
     "buildResources": "electron/build"

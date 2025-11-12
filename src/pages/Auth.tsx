@@ -71,7 +71,7 @@ const Auth = () => {
             <Clock className="w-12 h-12 text-primary-foreground" />
           </div>
           <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Timewise
+            TimeWiz
           </h1>
           <p className="text-xl text-muted-foreground max-w-lg">
             Smart scheduling that learns from your calendar and suggests the perfect time for every task

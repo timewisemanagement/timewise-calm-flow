@@ -28,7 +28,7 @@ const Index = () => {
             </div>
 
             <h1 className="text-5xl md:text-7xl font-bold">
-              <span className="bg-gradient-primary bg-clip-text text-transparent">Timewise</span>
+              <span className="bg-gradient-primary bg-clip-text text-transparent">TimeWiz</span>
             </h1>
 
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
@@ -87,7 +87,7 @@ const Index = () => {
         <div className="bg-gradient-primary rounded-3xl p-12 text-center shadow-2xl">
           <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">Ready to optimize your time?</h2>
           <p className="text-xl text-primary-foreground/90 mb-8">
-            Join Timewise today and let AI handle your scheduling
+            Join TimeWiz today and let AI handle your scheduling
           </p>
           <Button size="lg" variant="secondary" className="text-lg px-8 py-6" onClick={() => navigate("/auth")}>
             Start Free
@@ -99,7 +99,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t py-8 bg-card/50">
         <div className="max-w-7xl mx-auto px-4 text-center text-muted-foreground">
-          <p>© 2024 Timewise. Smart scheduling for productive people.</p>
+          <p>© 2024 TimeWiz. Smart scheduling for productive people.</p>
         </div>
       </footer>
     </div>
