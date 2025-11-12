@@ -3,6 +3,8 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 interface Task {
   id: string;
   scheduled_date: string | null;
+  scheduled_time?: string | null;
+  start_time?: string | null;
   color?: string;
 }
 
@@ -76,20 +78,33 @@ export function MiniCalendar({ tasks, calendarEvents = [], currentMonth, onClick
               <div>{format(day, 'd')}</div>
               {(dayTasks.length > 0 || dayEvents.length > 0) && (
                 <div className="flex justify-center gap-0.5 mt-0.5">
-                  {dayEvents.slice(0, 3).map((event, i) => (
-                    <div
-                      key={`event-${i}`}
-                      className="w-1 h-1 rounded-full"
-                      style={{ backgroundColor: '#a855f7' }}
-                    />
-                  ))}
-                  {dayTasks.slice(0, 3 - dayEvents.length).map((task, i) => (
-                    <div
-                      key={`task-${i}`}
-                      className="w-1 h-1 rounded-full"
-                      style={{ backgroundColor: task.color || '#3b82f6' }}
-                    />
-                  ))}
+                  {[
+                    ...dayEvents.map((event) => ({
+                      type: 'event' as const,
+                      data: event,
+                      time: new Date(event.start_time).getTime(),
+                    })),
+                    ...dayTasks.map((task) => ({
+                      type: 'task' as const,
+                      data: task,
+                      time: task.scheduled_time
+                        ? new Date(`2000-01-01T${task.scheduled_time}`).getTime()
+                        : task.start_time
+                        ? new Date(`2000-01-01T${task.start_time}`).getTime()
+                        : 0,
+                    })),
+                  ]
+                    .sort((a, b) => a.time - b.time)
+                    .slice(0, 3)
+                    .map((item, i) => (
+                      <div
+                        key={`${item.type}-${i}`}
+                        className="w-1 h-1 rounded-full"
+                        style={{
+                          backgroundColor: item.type === 'event' ? '#a855f7' : (item.data as Task).color || '#3b82f6',
+                        }}
+                      />
+                    ))}
                 </div>
               )}
             </div>

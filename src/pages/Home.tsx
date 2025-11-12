@@ -227,32 +227,56 @@ const Home = () => {
                       <div className={`text-lg font-semibold ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</div>
                     </div>
                     <div className="space-y-1">
-                      {dayEvents.slice(0, 3).map((event) => (
-                        <div
-                          key={event.id}
-                          className="text-xs truncate px-1 py-0.5 rounded border-l-2 border-purple-500"
-                          style={{
-                            backgroundColor: "hsl(var(--purple) / 0.1)",
-                            color: "hsl(var(--purple))",
-                          }}
-                          title={event.title}
-                        >
-                          {event.title}
-                        </div>
-                      ))}
-                      {dayTasks.slice(0, 3 - dayEvents.length).map((task) => (
-                        <div
-                          key={task.id}
-                          className="text-xs truncate px-1 py-0.5 rounded"
-                          style={{
-                            backgroundColor: task.color || "#3b82f6",
-                            color: "white",
-                          }}
-                          title={task.title}
-                        >
-                          {task.title}
-                        </div>
-                      ))}
+                      {[
+                        ...dayEvents.map((event) => ({
+                          type: 'event' as const,
+                          data: event,
+                          time: new Date(event.start_time).getTime(),
+                        })),
+                        ...dayTasks.map((task) => ({
+                          type: 'task' as const,
+                          data: task,
+                          time: task.scheduled_time
+                            ? new Date(`2000-01-01T${task.scheduled_time}`).getTime()
+                            : task.start_time
+                            ? new Date(`2000-01-01T${task.start_time}`).getTime()
+                            : 0,
+                        })),
+                      ]
+                        .sort((a, b) => a.time - b.time)
+                        .slice(0, 3)
+                        .map((item) => {
+                          if (item.type === 'event') {
+                            const event = item.data;
+                            return (
+                              <div
+                                key={event.id}
+                                className="text-xs truncate px-1 py-0.5 rounded border-l-2 border-purple-500"
+                                style={{
+                                  backgroundColor: "hsl(var(--purple) / 0.1)",
+                                  color: "hsl(var(--purple))",
+                                }}
+                                title={event.title}
+                              >
+                                {event.title}
+                              </div>
+                            );
+                          }
+                          const task = item.data;
+                          return (
+                            <div
+                              key={task.id}
+                              className="text-xs truncate px-1 py-0.5 rounded"
+                              style={{
+                                backgroundColor: task.color || "#3b82f6",
+                                color: "white",
+                              }}
+                              title={task.title}
+                            >
+                              {task.title}
+                            </div>
+                          );
+                        })}
                       {dayTasks.length + dayEvents.length > 3 && (
                         <div className="text-xs text-center text-muted-foreground">
                           +{dayTasks.length + dayEvents.length - 3}
