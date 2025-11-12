@@ -31,6 +31,7 @@ interface CalendarEvent {
   end_time: string;
   location: string | null;
   provider_event_id: string;
+  attended?: boolean;
 }
 
 const Home = () => {
@@ -273,7 +274,7 @@ const Home = () => {
                             return (
                               <div
                                 key={event.id}
-                                className="text-xs truncate px-1 py-0.5 rounded border-l-2 border-purple-500"
+                                className={`text-xs truncate px-1 py-0.5 rounded border-l-2 border-purple-500 ${event.attended ? 'line-through opacity-60' : ''}`}
                                 style={{
                                   backgroundColor: "hsl(var(--purple) / 0.1)",
                                   color: "hsl(var(--purple))",
@@ -285,10 +286,11 @@ const Home = () => {
                             );
                           }
                           const task = item.data;
+                          const isCompleted = task.status === 'completed';
                           return (
                             <div
                               key={task.id}
-                              className="text-xs truncate px-1 py-0.5 rounded"
+                              className={`text-xs truncate px-1 py-0.5 rounded ${isCompleted ? 'line-through opacity-60' : ''}`}
                               style={{
                                 backgroundColor: task.color || "#3b82f6",
                                 color: "white",
@@ -360,7 +362,7 @@ const Home = () => {
                           return (
                             <div
                               key={event.id}
-                              className="flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-purple-500 hover:bg-accent cursor-pointer transition-colors"
+                              className={`flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-purple-500 hover:bg-accent cursor-pointer transition-colors ${event.attended ? 'opacity-50' : ''}`}
                               onClick={() => navigate("/schedule")}
                             >
                               <div className="flex-1 min-w-0">
@@ -368,7 +370,7 @@ const Home = () => {
                                   <span className="text-purple-600">📅</span>
                                   <span className="text-xs font-medium text-purple-600">Google Calendar</span>
                                 </div>
-                                <div className="font-medium">{event.title}</div>
+                                <div className={`font-medium ${event.attended ? 'line-through' : ''}`}>{event.title}</div>
                                 <div className="text-sm text-muted-foreground mt-1">
                                   {format(eventStart, "h:mm a")} - {format(eventEnd, "h:mm a")}
                                 </div>

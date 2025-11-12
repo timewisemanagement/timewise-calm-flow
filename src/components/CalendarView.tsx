@@ -36,6 +36,7 @@ interface CalendarEvent {
   end_time: string;
   location: string | null;
   provider_event_id: string;
+  attended?: boolean;
 }
 
 interface CalendarViewProps {
@@ -150,13 +151,13 @@ export function CalendarView({ tasks, calendarEvents, currentMonth, onMonthChang
                     return (
                       <div
                         key={event.id}
-                        className="cursor-default rounded p-1 text-xs border-l-2 border-purple-500 hover:bg-accent"
+                        className={`cursor-default rounded p-1 text-xs border-l-2 border-purple-500 hover:bg-accent ${event.attended ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center gap-1 mb-1">
                           <span className="text-purple-600">📅</span>
                           <span className="text-xs font-medium text-purple-600">Google Calendar</span>
                         </div>
-                        <div className="truncate font-medium">{event.title}</div>
+                        <div className={`truncate font-medium ${event.attended ? 'line-through' : ''}`}>{event.title}</div>
                         <div className="text-muted-foreground text-xs">
                           {format(eventStart, 'h:mm a')} - {format(eventEnd, 'h:mm a')}
                         </div>
