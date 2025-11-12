@@ -432,22 +432,29 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
 
       if (error) throw error;
 
-      toast.success('Task created!');
-      
-      // Auto-trigger AI suggestions if needed
+      // Auto-trigger AI scheduling if needed (no date/time provided)
       if (shouldTriggerAI) {
-        toast.info('AI is optimizing your schedule...');
+        toast.info('AI is scheduling your task...');
         try {
           const { data: { session } } = await supabase.auth.getSession();
-          await supabase.functions.invoke('generate-suggestions', {
+          const { data, error: invokeError } = await supabase.functions.invoke('generate-suggestions', {
             headers: {
               Authorization: `Bearer ${session?.access_token}`,
             },
           });
+          
+          if (invokeError) {
+            console.error('AI scheduling error:', invokeError);
+            toast.error('Task created but AI scheduling failed. Check Profile to manually schedule.');
+          } else {
+            toast.success('Task created and scheduled by AI!');
+          }
         } catch (aiError) {
           console.error('AI scheduling error:', aiError);
-          toast.error('Task created but AI optimization failed.');
+          toast.error('Task created but AI scheduling failed. Check Profile to manually schedule.');
         }
+      } else {
+        toast.success('Task created!');
       }
 
       setNewTask({
