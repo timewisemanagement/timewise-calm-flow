@@ -1,6 +1,7 @@
 {
   "appId": "com.timewiz.app",
   "productName": "TimeWiz",
+  "version": "1.0.0",
   "directories": {
     "output": "release",
     "buildResources": "electron/build"
