@@ -126,28 +126,45 @@ export function CalendarView({ tasks, calendarEvents, currentMonth, onMonthChang
             >
               <div className="font-semibold mb-1">{format(day, 'd')}</div>
               <div className="space-y-1">
-                {/* Render calendar events first */}
-                {dayEvents.map(event => {
-                  const eventStart = new Date(event.start_time);
-                  const eventEnd = new Date(event.end_time);
-                  return (
-                    <div
-                      key={event.id}
-                      className="cursor-default rounded p-1 text-xs border-l-2 border-purple-500 bg-purple-50"
-                    >
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-purple-600">📅</span>
-                        <span className="text-xs font-medium">Google Calendar</span>
+                {/* Combine and sort tasks and events by time */}
+                {[
+                  ...dayEvents.map(event => ({
+                    type: 'event' as const,
+                    data: event,
+                    time: new Date(event.start_time).getTime(),
+                  })),
+                  ...dayTasks.map(task => ({
+                    type: 'task' as const,
+                    data: task,
+                    time: task.scheduled_time 
+                      ? new Date(`2000-01-01T${task.scheduled_time}`).getTime()
+                      : 0,
+                  })),
+                ]
+                .sort((a, b) => a.time - b.time)
+                .map(item => {
+                  if (item.type === 'event') {
+                    const event = item.data;
+                    const eventStart = new Date(event.start_time);
+                    const eventEnd = new Date(event.end_time);
+                    return (
+                      <div
+                        key={event.id}
+                        className="cursor-default rounded p-1 text-xs border-l-2 border-purple-500 hover:bg-accent"
+                      >
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-purple-600">📅</span>
+                          <span className="text-xs font-medium text-purple-600">Google Calendar</span>
+                        </div>
+                        <div className="truncate font-medium">{event.title}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {format(eventStart, 'h:mm a')} - {format(eventEnd, 'h:mm a')}
+                        </div>
                       </div>
-                      <div className="truncate font-medium">{event.title}</div>
-                      <div className="text-muted-foreground text-xs">
-                        {format(eventStart, 'h:mm a')} - {format(eventEnd, 'h:mm a')}
-                      </div>
-                    </div>
-                  );
-                })}
-                {/* Render tasks */}
-                {dayTasks.map(task => {
+                    );
+                  }
+                  
+                  const task = item.data;
                   const isCompleted = task.status === 'completed';
                   return (
                     <ContextMenu key={task.id}>
