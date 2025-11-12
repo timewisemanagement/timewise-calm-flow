@@ -80,10 +80,22 @@ Deno.serve(async (req) => {
     }
 
     // Only schedule tasks that are missing date OR time (unscheduled tasks)
-    const unscheduledTasks = allTasks.filter(t => !t.scheduled_date || !t.scheduled_time);
+    // Limit to top 10 by priority to avoid overwhelming the AI
+    const unscheduledTasks = allTasks
+      .filter(t => !t.scheduled_date || !t.scheduled_time)
+      .sort((a, b) => {
+        const priorityMap: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
+        return (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+      })
+      .slice(0, 10);
     
     // Tasks with both date AND time are already scheduled - treat as conflicts to avoid
-    const scheduledTasks = allTasks.filter(t => t.scheduled_date && t.scheduled_time);
+    // CRITICAL: Only include scheduled tasks in the NEXT 7 DAYS to reduce token count
+    const scheduledTasks = allTasks.filter(t => {
+      if (!t.scheduled_date || !t.scheduled_time) return false;
+      const taskDate = new Date(t.scheduled_date);
+      return taskDate >= now && taskDate <= sevenDaysLater;
+    });
 
     // If there are no unscheduled tasks, nothing to do
     if (unscheduledTasks.length === 0) {
@@ -104,6 +116,8 @@ Deno.serve(async (req) => {
       .gte('start_time', now.toISOString())
       .lte('start_time', sevenDaysLater.toISOString())
       .order('start_time', { ascending: true });
+
+    console.log(`Processing: ${unscheduledTasks.length} unscheduled, ${scheduledTasks.length} scheduled conflicts, ${calendarEvents?.length || 0} calendar conflicts`);
 
     // Prepare context for AI
     const context = {
@@ -132,24 +146,15 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert human planner. Schedule tasks where users benefit most.
+            content: `You are a task scheduler. Schedule tasks in optimal time slots.
 
-SCORING RUBRIC (use to evaluate each placement):
-+0.4 if slot matches user focus preference and is during prime focus time
-+0.25 if slot is on a day with spare time (less than average load)
-+0.2 if slot avoids travel/conflict (no calendar events nearby)
--0.3 if slot is late-night or inside downtime
-Final score normalized to 0–1
-
-PLACEMENT LOGIC (must follow):
-1. NEVER schedule inside downtime or outside wake_time–bed_time
-2. Respect all calendarEvents and scheduledTasks: avoid overlaps, maintain 10min buffer
-3. Prefer user focus_preference for high priority tasks (score ≥ 0.8 for high priority)
-4. Tasks with requested date but no time: place on that day at BEST slot (not noon default)
-5. Tasks without date/time: find next available day within 7 days, balance load (avoid exceeding ideal_focus_duration * 2 per day)
-6. Return highest benefit score and include 1-2 sentence reason for each placement
-
-EDGE CASES: If no conflict-free slot within 7 days, return best-effort with score < 0.5 and explain trade-offs.`
+RULES:
+1. Avoid downtime and respect wake/bed times
+2. Don't overlap with calendar events or scheduled tasks (keep 10min buffer)
+3. Match user's focus preference (morning/afternoon/evening) for high priority
+4. If task has a date but no time: find best time on that day
+5. If task has no date/time: schedule in next 7 days
+6. Return score 0-1 and brief reason for each placement`
           },
           {
             role: 'user',
@@ -169,24 +174,12 @@ ${JSON.stringify(unscheduledTasks.map(t => ({
   title: t.title, 
   duration_minutes: t.duration_minutes, 
   priority: t.priority,
-  description: t.description,
   requested_date: t.scheduled_date || null
 })), null, 2)}
 
-ALREADY SCHEDULED TASKS (avoid conflicts):
-${JSON.stringify(scheduledTasks.map(t => ({ 
-  date: t.scheduled_date, 
-  time: t.scheduled_time, 
-  duration_minutes: t.duration_minutes,
-  title: t.title
-})), null, 2)}
-
-CALENDAR EVENTS (avoid conflicts):
-${JSON.stringify((calendarEvents || []).map(e => ({ 
-  start: e.start_time, 
-  end: e.end_time,
-  title: e.title
-})), null, 2)}
+CONFLICTS TO AVOID:
+Scheduled: ${scheduledTasks.map(t => `${t.scheduled_date} ${t.scheduled_time} (${t.duration_minutes}min)`).join(', ') || 'none'}
+Events: ${(calendarEvents || []).map(e => `${e.start_time.slice(0,16)} to ${e.end_time.slice(11,16)}`).join(', ') || 'none'}
 
 Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task with full ISO 8601 datetime (with timezone), score, and reason.`
           }
@@ -248,7 +241,8 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI response received:', JSON.stringify(aiData, null, 2));
+    console.log('AI response received - tokens:', aiData.usage?.total_tokens || 'unknown');
+    console.log('AI response:', JSON.stringify(aiData, null, 2));
     
     let suggestions = [];
     try {
