@@ -45,7 +45,7 @@ serve(async (req) => {
       authUrl.searchParams.append('client_id', clientId!);
       authUrl.searchParams.append('redirect_uri', redirectUri);
       authUrl.searchParams.append('response_type', 'code');
-      authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/calendar.readonly');
+      authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email');
       authUrl.searchParams.append('access_type', 'offline');
       authUrl.searchParams.append('prompt', 'consent');
       authUrl.searchParams.append('state', stateData);
