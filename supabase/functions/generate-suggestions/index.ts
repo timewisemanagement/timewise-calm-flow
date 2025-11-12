@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       currentTime: now.toISOString(),
     };
 
-    // Call AI with simpler prompt for faster response
+    // Use tool calling for reliable structured output
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -128,59 +128,102 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'user',
-            content: `You are a scheduling assistant. Schedule these unscheduled tasks optimally.
+            content: `Schedule these ${unscheduledTasks.length} unscheduled tasks into optimal time slots over the next 7 days starting ${now.toISOString()}.
 
-RULES:
-- Never overlap with scheduled tasks or calendar events
-- Respect wake time (${context.profile.wake_time || '08:00:00'}) and bed time (${context.profile.bed_time || '22:00:00'})
-- Leave 10 minutes between tasks
-- High priority tasks get better time slots
+TASKS TO SCHEDULE:
+${JSON.stringify(unscheduledTasks.map(t => ({ 
+  id: t.id, 
+  title: t.title, 
+  duration: t.duration_minutes, 
+  priority: t.priority,
+  description: t.description 
+})), null, 2)}
 
-Unscheduled tasks: ${JSON.stringify(context.unscheduledTasks.map(t => ({ id: t.id, title: t.title, duration: t.duration_minutes, priority: t.priority })))}
-Scheduled tasks (avoid these times): ${JSON.stringify(context.scheduledTasks.map(t => ({ date: t.scheduled_date, time: t.scheduled_time, duration: t.duration_minutes })))}
-Calendar events (avoid these): ${JSON.stringify(context.calendarEvents.map(e => ({ start: e.start_time, end: e.end_time })))}
+CONSTRAINTS:
+- Wake time: ${context.profile.wake_time || '08:00:00'}
+- Bed time: ${context.profile.bed_time || '22:00:00'}
+${context.profile.downtime_start && context.profile.downtime_end ? `- Downtime: ${context.profile.downtime_start} to ${context.profile.downtime_end}` : ''}
+- Leave 10 minutes buffer between tasks
+- High priority tasks should get prime time slots (${context.profile.focus_preference || 'morning'})
 
-Return ONLY a JSON array, no markdown:
-[{"task_id":"uuid","suggested_start":"2025-11-12T09:00:00Z","duration_minutes":60,"score":0.9,"reasoning":"morning slot"}]`
+AVOID CONFLICTS WITH:
+Scheduled Tasks: ${JSON.stringify(scheduledTasks.map(t => ({ 
+  date: t.scheduled_date, 
+  time: t.scheduled_time, 
+  duration: t.duration_minutes,
+  title: t.title
+})))}
+
+Calendar Events: ${JSON.stringify((calendarEvents || []).map(e => ({ 
+  start: e.start_time, 
+  end: e.end_time,
+  title: e.title
+})))}
+
+Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task.`
           }
         ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "schedule_tasks",
+            description: "Schedule tasks into optimal time slots",
+            parameters: {
+              type: "object",
+              properties: {
+                schedules: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      task_id: { type: "string", description: "UUID of the task" },
+                      suggested_start: { type: "string", description: "ISO 8601 datetime string" },
+                      duration_minutes: { type: "number" },
+                      score: { type: "number", description: "Confidence score 0-1" }
+                    },
+                    required: ["task_id", "suggested_start", "duration_minutes", "score"],
+                    additionalProperties: false
+                  }
+                }
+              },
+              required: ["schedules"],
+              additionalProperties: false
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "schedule_tasks" } },
         temperature: 0.3,
-        max_tokens: 1500,
       }),
     });
 
     if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error(`AI API error: ${aiResponse.status} - ${errorText}`);
       throw new Error(`AI API error: ${aiResponse.statusText}`);
     }
 
     const aiData = await aiResponse.json();
-    const aiContent = aiData.choices[0].message.content;
+    console.log('AI response received:', JSON.stringify(aiData, null, 2));
     
-    console.log('AI scheduling response received');
-    
-    // Parse JSON response
     let suggestions = [];
     try {
-      // Clean and extract JSON array
-      let cleaned = aiContent.trim();
-      // Remove markdown code blocks if present
-      cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
-      // Extract array
-      const match = cleaned.match(/\[[\s\S]*\]/);
-      if (match) {
-        suggestions = JSON.parse(match[0]);
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        const parsed = typeof toolCall.function.arguments === 'string' 
+          ? JSON.parse(toolCall.function.arguments)
+          : toolCall.function.arguments;
+        suggestions = parsed.schedules || [];
+        console.log(`Parsed ${suggestions.length} suggestions from tool call`);
       } else {
-        console.error('No JSON array found in response');
-        suggestions = [];
+        console.error('No tool call found in response');
       }
     } catch (e) {
       console.error('Failed to parse AI response:', e);
-      console.error('AI response:', aiContent);
-      suggestions = [];
+      console.error('Full AI response:', JSON.stringify(aiData));
     }
 
     // Delete old suggestions for this user
