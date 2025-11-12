@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           {
             role: 'system',
@@ -267,13 +267,6 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
       console.error('Full AI response:', JSON.stringify(aiData));
     }
 
-    // Delete old suggestions for this user
-    await supabase
-      .from('suggestions')
-      .delete()
-      .eq('user_id', user.id)
-      .is('outcome', null);
-
     // Helper: ensure valid ISO datetime with fallback to 09:00:00
     const ensureFullISO = (suggested: string, profileTimezone: string): string => {
       // If date-only like "2025-11-22", add 09:00:00
@@ -289,48 +282,25 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
       return suggested;
     };
 
-    // Insert new suggestions and auto-schedule ALL tasks
-    const insertData = suggestions.map((s: any) => {
-      const fixedISO = ensureFullISO(s.suggested_start, context.profile.timezone || 'UTC');
-      console.log(`Task ${s.task_id}: original=${s.suggested_start}, fixed=${fixedISO}, reason=${s.reason || 'N/A'}`);
-      
-      return {
-        user_id: user.id,
-        task_id: s.task_id,
-        suggested_start: fixedISO,
-        duration_minutes: s.duration_minutes,
-        score: s.score || 0.8,
-      };
-    });
-
-    if (insertData.length > 0) {
-      const { error: insertError } = await supabase
-        .from('suggestions')
-        .insert(insertData);
-
-      if (insertError) {
-        console.error('Error inserting suggestions:', insertError);
-      }
-
+    // Directly schedule tasks - no suggestions table needed
+    if (suggestions.length > 0) {
       // Update ONLY the unscheduled tasks with new schedule
-      for (let i = 0; i < suggestions.length; i++) {
-        const suggestion = suggestions[i];
-        const insertItem = insertData[i];
-        
+      for (const suggestion of suggestions) {
         // Double-check that we're only updating tasks that were unscheduled
-        const taskToUpdate = unscheduledTasks.find(t => t.id === suggestion.task_id);
+        const taskToUpdate = unscheduledTasks.find((t: any) => t.id === suggestion.task_id);
         if (!taskToUpdate) {
           console.warn(`Skipping update for task ${suggestion.task_id} - not in unscheduled list`);
           continue;
         }
 
-        const suggestedStart = new Date(insertItem.suggested_start);
+        const fixedISO = ensureFullISO(suggestion.suggested_start, context.profile.timezone || 'UTC');
+        const suggestedStart = new Date(fixedISO);
         const scheduledDate = suggestedStart.toISOString().slice(0, 10); // YYYY-MM-DD
         const scheduledTime = suggestedStart.toISOString().slice(11, 19); // HH:MM:SS
 
-        console.log(`Updating task ${suggestion.task_id}: date=${scheduledDate}, time=${scheduledTime}`);
+        console.log(`Scheduling task ${suggestion.task_id}: date=${scheduledDate}, time=${scheduledTime}, reason=${suggestion.reason}`);
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('tasks')
           .update({
             scheduled_date: scheduledDate,
@@ -338,15 +308,19 @@ Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task wi
             status: 'scheduled'
           })
           .eq('id', suggestion.task_id);
+
+        if (updateError) {
+          console.error(`Failed to schedule task ${suggestion.task_id}:`, updateError);
+        }
       }
     }
 
-    console.log(`Task scheduling completed: ${insertData.length} tasks scheduled`);
+    console.log(`Task scheduling completed: ${suggestions.length} tasks scheduled`);
 
     return new Response(
       JSON.stringify({ 
-        message: `Scheduled ${insertData.length} unscheduled tasks`,
-        suggestions: insertData 
+        message: `Scheduled ${suggestions.length} tasks`,
+        scheduled: suggestions.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
