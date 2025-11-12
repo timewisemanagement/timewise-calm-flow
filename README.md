@@ -1,12 +1,46 @@
-# AI-Powered Task Management & Scheduling Platform
+# TimeWiz - Smart Task Management & Scheduling
 
-A sophisticated task management application that combines intelligent AI scheduling, Google Calendar integration, and Canvas LMS synchronization to optimize your productivity and time management.
+TimeWiz is an intelligent productivity platform that transforms how you manage tasks and organize your time. Powered by advanced AI scheduling algorithms, TimeWiz learns from your calendar patterns to suggest optimal time slots for your tasks, helping you work smarter, not harder.
+
+**Live Demo**: [View Application](https://lovable.dev/projects/b23cdb38-6a3d-4c13-96b9-6c88c10b8143)
+
+---
+
+## 📥 Download TimeWiz
+
+### For Windows Users
+
+**Quick Download Instructions:**
+
+1. **Download the installer**
+   - Go to the [Releases](../../releases) page
+   - Click on the latest release
+   - Download the file ending in `.exe` (e.g., `TimeWiz-Setup-1.0.0.exe`)
+
+2. **Install TimeWiz**
+   - Find the downloaded `.exe` file in your Downloads folder
+   - Double-click the file to run the installer
+   - Follow the installation wizard (click "Next" through the steps)
+   - Choose where you want to install TimeWiz (default location is recommended)
+
+3. **Launch the app**
+   - After installation, find TimeWiz in your Start Menu or on your Desktop
+   - Double-click the TimeWiz icon to start the application
+   - Sign up for a new account or log in
+
+**System Requirements:**
+- Windows 10 or Windows 11
+- At least 4GB of RAM
+- 500MB of free disk space
+- Internet connection required
+
+**Note**: The app is approximately 150MB in size. The first download may take a few minutes depending on your internet speed.
+
+---
 
 ## 🚀 Overview
 
 This platform revolutionizes how you manage tasks and schedules by leveraging artificial intelligence to automatically suggest optimal task scheduling based on your workload, priorities, and existing calendar commitments. Perfect for students, professionals, and anyone looking to maximize their productivity.
-
-**Live Demo**: [View Application](https://lovable.dev/projects/b23cdb38-6a3d-4c13-96b9-6c88c10b8143)
 
 ## ✨ Key Features
 
@@ -86,7 +120,7 @@ This platform revolutionizes how you manage tasks and schedules by leveraging ar
 - **Zod** - Schema validation
 - **Lucide React** - Beautiful icon system
 
-## 🚦 Getting Started
+## 👩‍💻 For Developers
 
 ### Prerequisites
 - Node.js 18+ and npm installed ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
@@ -125,7 +159,7 @@ This project supports building as a Windows desktop application using Electron.
 You need to manually add these scripts to your `package.json`:
 
 ```json
-"main": "electron/main.js",
+"main": "electron/main.cjs",
 "scripts": {
   "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:8080 && electron .\"",
   "electron:build": "npm run build && electron-builder",
