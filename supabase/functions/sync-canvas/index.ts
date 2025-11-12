@@ -42,6 +42,51 @@ serve(async (req) => {
       throw new Error('Canvas URL not configured');
     }
 
+    // Validate Canvas URL to prevent SSRF attacks
+    const canvasUrl = profile.canvas_url.trim();
+    
+    // Parse and validate URL
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(canvasUrl);
+    } catch {
+      throw new Error('Invalid Canvas URL format');
+    }
+
+    // Only allow HTTPS protocol
+    if (parsedUrl.protocol !== 'https:') {
+      throw new Error('Canvas URL must use HTTPS protocol');
+    }
+
+    // Allowlist of valid Canvas domains
+    const allowedDomains = [
+      'instructure.com',
+      'canvas.instructure.com',
+    ];
+
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isAllowed = allowedDomains.some(domain => 
+      hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+
+    if (!isAllowed) {
+      throw new Error('Canvas URL must be from an authorized Canvas domain (*.instructure.com)');
+    }
+
+    // Reject private IP ranges (RFC 1918, loopback, link-local)
+    const privateIpPatterns = [
+      /^127\./,           // Loopback
+      /^10\./,            // Private 10.0.0.0/8
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // Private 172.16.0.0/12
+      /^192\.168\./,      // Private 192.168.0.0/16
+      /^169\.254\./,      // Link-local
+      /^localhost$/i,     // Localhost
+    ];
+
+    if (privateIpPatterns.some(pattern => pattern.test(hostname))) {
+      throw new Error('Canvas URL cannot be a private IP address');
+    }
+
     const canvasToken = Deno.env.get('CANVAS_API_TOKEN');
     if (!canvasToken) {
       throw new Error('Canvas API token not configured');
