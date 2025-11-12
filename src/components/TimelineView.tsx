@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit, Check } from "lucide-react";
+import { Trash2, Edit, CheckCircle2, Circle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Task {
@@ -227,17 +227,22 @@ export function TimelineView({ tasks, calendarEvents, onDeleteTask, onUpdateStat
                           </div>
                           {!isSmall && (
                             <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                              {!isCompleted && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0"
-                                  onClick={(e) => { e.stopPropagation(); onUpdateStatus(task.id, 'completed'); }}
-                                  title="Mark as finished"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  onUpdateStatus(task.id, isCompleted ? 'pending' : 'completed'); 
+                                }}
+                                title={isCompleted ? "Mark as pending" : "Mark as completed"}
+                              >
+                                {isCompleted ? (
+                                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
