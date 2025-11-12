@@ -79,6 +79,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Define time window for scheduling (next 7 days)
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
     // Only schedule tasks that are missing date OR time (unscheduled tasks)
     // Limit to top 10 by priority to avoid overwhelming the AI
     const unscheduledTasks = allTasks
@@ -106,9 +110,6 @@ Deno.serve(async (req) => {
     }
 
     // Fetch calendar events for next 7 days
-    const now = new Date();
-    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
     const { data: calendarEvents } = await supabase
       .from('calendar_events')
       .select('*')
