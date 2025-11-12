@@ -111,10 +111,51 @@ This platform revolutionizes how you manage tasks and schedules by leveraging ar
    ```
 
 4. **Open your browser**
-   Navigate to `http://localhost:5173`
+   Navigate to `http://localhost:8080`
 
 ### Environment Setup
 The project uses Lovable Cloud, which automatically configures environment variables. No additional setup required for database and authentication.
+
+### Building Desktop App (.exe)
+
+This project supports building as a Windows desktop application using Electron.
+
+#### Scripts to Add to package.json
+
+You need to manually add these scripts to your `package.json`:
+
+```json
+"main": "electron/main.js",
+"scripts": {
+  "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:8080 && electron .\"",
+  "electron:build": "npm run build && electron-builder",
+  "electron:build:win": "npm run build && electron-builder --win",
+  "electron:build:mac": "npm run build && electron-builder --mac",
+  "electron:build:linux": "npm run build && electron-builder --linux"
+}
+```
+
+#### Building the .exe
+
+1. **Export to GitHub**: Click the GitHub button in Lovable to export your project
+2. **Clone locally**: Clone the repository to your computer
+3. **Install dependencies**: Run `npm install`
+4. **Build for Windows**: Run `npm run electron:build:win`
+5. **Find your .exe**: The installer will be in the `release` folder
+
+#### Development Mode
+
+To test the desktop app during development:
+```bash
+npm run electron:dev
+```
+
+#### Notes
+- The .exe file will be approximately 150MB (includes Chromium browser)
+- Users can install the app like any Windows application
+- The app still connects to Lovable Cloud backend, so internet is required
+- To build for Mac, you need macOS with Xcode
+- To build for Linux, use `npm run electron:build:linux`
 
 ## 📖 Usage Guide
 
