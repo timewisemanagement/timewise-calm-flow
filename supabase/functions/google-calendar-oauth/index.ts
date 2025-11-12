@@ -157,6 +157,55 @@ serve(async (req) => {
         throw new Error('Failed to save Google Calendar credentials');
       }
 
+      // Immediately sync calendar events after connection
+      try {
+        const timeMin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+
+        const calendarResponse = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
+          {
+            headers: {
+              'Authorization': `Bearer ${tokens.access_token}`,
+            },
+          }
+        );
+
+        if (calendarResponse.ok) {
+          const calendarData = await calendarResponse.json();
+          const events = calendarData.items || [];
+          
+          const newEvents = events
+            .filter((event: any) => 
+              event.start && 
+              (event.start.dateTime || event.start.date)
+            )
+            .map((event: any) => ({
+              user_id: userId,
+              provider_event_id: event.id,
+              title: event.summary || 'Untitled Event',
+              description: event.description || null,
+              location: event.location || null,
+              start_time: event.start.dateTime || event.start.date,
+              end_time: event.end.dateTime || event.end.date,
+              metadata: {
+                htmlLink: event.htmlLink,
+                status: event.status,
+                organizer: event.organizer,
+              },
+            }));
+
+          if (newEvents.length > 0) {
+            await supabaseClient.from('calendar_events').insert(newEvents);
+          }
+
+          console.log(`Initial sync: imported ${newEvents.length} calendar events`);
+        }
+      } catch (syncError) {
+        console.error('Initial calendar sync error:', syncError);
+        // Don't throw - we still want to redirect even if sync fails
+      }
+
       // Redirect back to profile page
       return new Response(null, {
         status: 302,
