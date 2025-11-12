@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
-import { Calendar, Clock, ChevronRight, TrendingUp, Target, Zap } from "lucide-react";
+import { Calendar, Clock, ChevronRight, TrendingUp, Target, Zap, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Task {
@@ -134,6 +134,28 @@ const Home = () => {
   const upcomingTasks = tasks
     .filter((t) => t.scheduled_date && new Date(t.scheduled_date) >= startOfDay(new Date()) && t.status !== "completed")
     .slice(0, 5);
+
+  const handleToggleTaskComplete = async (taskId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === "completed" ? "pending" : "completed";
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: newStatus })
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, status: newStatus } : task
+        )
+      );
+      
+      toast.success(newStatus === "completed" ? "Task completed!" : "Task reopened");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update task");
+    }
+  };
 
   return (
     <div className="min-h-screen grey p-8">
@@ -359,14 +381,26 @@ const Home = () => {
                         return (
                           <div
                             key={task.id}
-                            className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
-                            onClick={() => navigate("/schedule")}
+                            className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent transition-colors"
                           >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleTaskComplete(task.id, task.status);
+                              }}
+                              className="flex-shrink-0 mt-0.5"
+                            >
+                              {task.status === "completed" ? (
+                                <CheckCircle2 className="h-5 w-5 text-primary" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </button>
                             <div
                               className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
                               style={{ backgroundColor: task.color || "#3b82f6" }}
                             />
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate("/schedule")}>
                               <div className={`font-medium ${task.status === "completed" ? "line-through opacity-60" : ""}`}>
                                 {task.title}
                               </div>
