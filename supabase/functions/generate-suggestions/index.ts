@@ -54,7 +54,10 @@ Deno.serve(async (req) => {
       throw new Error('Invalid user token');
     }
 
-    console.log('Generating task scheduling suggestions');
+    // Check if we're scheduling a specific task or all tasks
+    const { taskId } = await req.json().catch(() => ({}));
+    
+    console.log(`Generating task scheduling suggestions${taskId ? ` for task ${taskId}` : ''}`);
 
     // Fetch user's profile
     const { data: profile } = await supabase
@@ -84,14 +87,20 @@ Deno.serve(async (req) => {
     const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     // Only schedule tasks that are missing date OR time (unscheduled tasks)
-    // Limit to top 10 by priority to avoid overwhelming the AI
-    const unscheduledTasks = allTasks
-      .filter(t => !t.scheduled_date || !t.scheduled_time)
-      .sort((a, b) => {
-        const priorityMap: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
-        return (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
-      })
-      .slice(0, 10);
+    // If taskId is provided, only schedule that specific task
+    // Otherwise, limit to top 10 by priority to avoid overwhelming the AI
+    let unscheduledTasks = allTasks.filter(t => !t.scheduled_date || !t.scheduled_time);
+    
+    if (taskId) {
+      unscheduledTasks = unscheduledTasks.filter(t => t.id === taskId);
+    } else {
+      unscheduledTasks = unscheduledTasks
+        .sort((a, b) => {
+          const priorityMap: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
+          return (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+        })
+        .slice(0, 10);
+    }
     
     // Tasks with both date AND time are already scheduled - treat as conflicts to avoid
     // CRITICAL: Only include scheduled tasks in the NEXT 7 DAYS to reduce token count
