@@ -135,16 +135,20 @@ Deno.serve(async (req) => {
       currentTime: now.toISOString(),
     };
 
-    // Build detailed conflict list with time ranges
+    // Build detailed conflict list with time ranges - use UTC consistently
     const conflictList = scheduledTasks.map(t => {
-      const startDate = new Date(`${t.scheduled_date}T${t.scheduled_time}`);
-      const endDate = new Date(startDate.getTime() + (t.duration_minutes || 60) * 60000);
-      return `${startDate.toISOString().slice(0,16)} to ${endDate.toISOString().slice(11,16)} (${t.title})`;
+      const startDate = new Date(`${t.scheduled_date}T${t.scheduled_time}Z`); // Add Z for UTC
+      const endDate = new Date(startDate.getTime() + (t.duration_minutes || 60) * 60 * 1000);
+      return `${startDate.toISOString().slice(0,16)} to ${endDate.toISOString().slice(11,16)} - ${t.title}`;
     }).join('\n');
 
     const eventList = (calendarEvents || []).map(e => 
-      `${e.start_time.slice(0,16)} to ${e.end_time.slice(11,16)} (${e.title})`
+      `${e.start_time.slice(0,16)} to ${e.end_time.slice(11,16)} - ${e.title}`
     ).join('\n');
+
+    console.log('Conflicts being sent to AI:');
+    console.log('Scheduled tasks:', conflictList || 'NONE');
+    console.log('Calendar events:', eventList || 'NONE');
 
     // Use tool calling for reliable structured output with human-like reasoning
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -198,7 +202,14 @@ ${conflictList || 'No existing scheduled tasks'}
 CALENDAR EVENTS (AVOID THESE TIME RANGES):
 ${eventList || 'No calendar events'}
 
-IMPORTANT: Find gaps BETWEEN the scheduled items above. Do NOT place new tasks at times that overlap with existing scheduled tasks or events. Spread tasks throughout available time slots instead of clustering them all at ${context.profile.wake_time || '08:00:00'}.`
+CRITICAL INSTRUCTIONS:
+1. Look at the EXISTING SCHEDULE times above - do NOT schedule at those exact times
+2. If 08:00:00 appears in the existing schedule, choose a DIFFERENT time
+3. Find the NEXT available gap after existing tasks
+4. Spread tasks throughout the day - don't cluster at wake time
+5. Each new task must be in a time slot that does NOT overlap with any existing scheduled item
+
+Example: If 08:00-09:00 is taken, schedule at 09:10 or later. If 09:00-10:30 is taken, schedule at 10:40 or later.`
           }
         ],
         tools: [{
