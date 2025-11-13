@@ -135,6 +135,17 @@ Deno.serve(async (req) => {
       currentTime: now.toISOString(),
     };
 
+    // Build detailed conflict list with time ranges
+    const conflictList = scheduledTasks.map(t => {
+      const startDate = new Date(`${t.scheduled_date}T${t.scheduled_time}`);
+      const endDate = new Date(startDate.getTime() + (t.duration_minutes || 60) * 60000);
+      return `${startDate.toISOString().slice(0,16)} to ${endDate.toISOString().slice(11,16)} (${t.title})`;
+    }).join('\n');
+
+    const eventList = (calendarEvents || []).map(e => 
+      `${e.start_time.slice(0,16)} to ${e.end_time.slice(11,16)} (${e.title})`
+    ).join('\n');
+
     // Use tool calling for reliable structured output with human-like reasoning
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -143,46 +154,51 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'system',
-            content: `You are a task scheduler. Schedule tasks in optimal time slots.
+            content: `You are an intelligent task scheduler. Your job is to find the BEST available time slots for tasks.
 
-RULES:
-1. Avoid downtime and respect wake/bed times
-2. Don't overlap with calendar events or scheduled tasks (keep 10min buffer)
-3. Match user's focus preference (morning/afternoon/evening) for high priority
-4. If task has a date but no time: find best time on that day
-5. If task has no date/time: schedule in next 7 days
-6. Return score 0-1 and brief reason for each placement`
+CRITICAL RULES:
+1. NEVER schedule overlapping tasks - find gaps BETWEEN existing scheduled items
+2. Add 10-minute buffer before/after each existing task or event
+3. Respect wake time (${context.profile.wake_time || '08:00:00'}) and bed time (${context.profile.bed_time || '22:00:00'})
+4. Match user's focus preference for high-priority tasks: ${context.profile.focus_preference || 'morning'}
+5. Space out tasks throughout the day - don't cluster everything at wake time
+6. Consider task duration when finding slots
+
+SCORING GUIDE:
+- 0.9-1.0: Perfect slot (matches preference, no nearby conflicts)
+- 0.7-0.8: Good slot (available but not ideal time)
+- 0.5-0.6: Acceptable slot (works but has minor conflicts nearby)
+- Below 0.5: Poor slot (should avoid unless no other option)`
           },
           {
             role: 'user',
-            content: `Schedule these ${unscheduledTasks.length} unscheduled tasks over next 7 days starting ${now.toISOString()}.
+            content: `Find optimal time slots for these ${unscheduledTasks.length} tasks in the next 7 days (starting ${now.toISOString()}).
 
-USER PROFILE:
+USER PREFERENCES:
+- Wake: ${context.profile.wake_time || '08:00:00'}, Bed: ${context.profile.bed_time || '22:00:00'}
 - Focus preference: ${context.profile.focus_preference || 'morning'}
-- Ideal focus duration: ${context.profile.ideal_focus_duration || 60} minutes
 - Timezone: ${context.profile.timezone || 'UTC'}
-- Wake time: ${context.profile.wake_time || '08:00:00'}
-- Bed time: ${context.profile.bed_time || '22:00:00'}
-${context.profile.downtime_start && context.profile.downtime_end ? `- Downtime: ${context.profile.downtime_start} to ${context.profile.downtime_end}` : '- No downtime configured'}
+${context.profile.downtime_start && context.profile.downtime_end ? `- Downtime (avoid): ${context.profile.downtime_start} to ${context.profile.downtime_end}` : ''}
 
 TASKS TO SCHEDULE:
 ${JSON.stringify(unscheduledTasks.map(t => ({ 
   id: t.id, 
   title: t.title, 
-  duration_minutes: t.duration_minutes, 
-  priority: t.priority,
-  requested_date: t.scheduled_date || null
+  duration: t.duration_minutes + ' minutes',
+  priority: t.priority
 })), null, 2)}
 
-CONFLICTS TO AVOID:
-Scheduled: ${scheduledTasks.map(t => `${t.scheduled_date} ${t.scheduled_time} (${t.duration_minutes}min)`).join(', ') || 'none'}
-Events: ${(calendarEvents || []).map(e => `${e.start_time.slice(0,16)} to ${e.end_time.slice(11,16)}`).join(', ') || 'none'}
+EXISTING SCHEDULE (AVOID THESE TIME RANGES):
+${conflictList || 'No existing scheduled tasks'}
 
-Schedule ALL ${unscheduledTasks.length} tasks. Return one suggestion per task with full ISO 8601 datetime (with timezone), score, and reason.`
+CALENDAR EVENTS (AVOID THESE TIME RANGES):
+${eventList || 'No calendar events'}
+
+IMPORTANT: Find gaps BETWEEN the scheduled items above. Do NOT place new tasks at times that overlap with existing scheduled tasks or events. Spread tasks throughout available time slots instead of clustering them all at ${context.profile.wake_time || '08:00:00'}.`
           }
         ],
         tools: [{
