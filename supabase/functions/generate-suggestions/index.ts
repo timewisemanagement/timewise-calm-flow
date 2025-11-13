@@ -84,10 +84,7 @@ Deno.serve(async (req) => {
     }
 
     // Define time window for scheduling (next 7 days)
-    // Use user's timezone to determine "today" instead of server UTC time
-    const userTimezone = profile?.timezone || 'UTC';
-    const nowInUserTz = new Date().toLocaleString('en-US', { timeZone: userTimezone });
-    const now = new Date(nowInUserTz);
+    const now = new Date();
     const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     // If taskId provided, only schedule that specific task. Otherwise, schedule up to 10 unscheduled tasks
@@ -340,11 +337,23 @@ Example: If 08:00-09:00 is taken, schedule at 09:10 or later. If 09:00-10:30 is 
         const fixedISO = ensureFullISO(suggestion.suggested_start, context.profile.timezone || 'UTC');
         const suggestedStart = new Date(fixedISO);
         
-        // Extract date and time directly from ISO string without timezone conversion
-        // The AI suggests times in UTC, but we treat them as local times for storage
-        const isoString = suggestedStart.toISOString();
-        const scheduledDate = isoString.slice(0, 10);  // YYYY-MM-DD
-        const scheduledTime = isoString.slice(11, 19); // HH:MM:SS
+        // Convert to user's timezone for storage (don't use UTC)
+        // The AI returns times in UTC format, but we need to store in local date/time
+        const userTimezone = context.profile.timezone || 'UTC';
+        const scheduledDate = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: userTimezone, 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        }).format(suggestedStart);
+        
+        const scheduledTime = new Intl.DateTimeFormat('en-GB', { 
+          timeZone: userTimezone, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit',
+          hour12: false 
+        }).format(suggestedStart);
 
         console.log(`AI scheduled task ${suggestion.task_id}: ${scheduledDate} ${scheduledTime}`);
 
