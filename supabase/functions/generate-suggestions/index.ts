@@ -336,8 +336,24 @@ Example: If 08:00-09:00 is taken, schedule at 09:10 or later. If 09:00-10:30 is 
 
         const fixedISO = ensureFullISO(suggestion.suggested_start, context.profile.timezone || 'UTC');
         const suggestedStart = new Date(fixedISO);
-        const scheduledDate = suggestedStart.toISOString().slice(0, 10);
-        const scheduledTime = suggestedStart.toISOString().slice(11, 19);
+        
+        // Convert to user's timezone for storage (don't use UTC)
+        // The AI returns times in UTC format, but we need to store in local date/time
+        const userTimezone = context.profile.timezone || 'UTC';
+        const scheduledDate = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: userTimezone, 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        }).format(suggestedStart);
+        
+        const scheduledTime = new Intl.DateTimeFormat('en-GB', { 
+          timeZone: userTimezone, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit',
+          hour12: false 
+        }).format(suggestedStart);
 
         console.log(`AI scheduled task ${suggestion.task_id}: ${scheduledDate} ${scheduledTime}`);
 
