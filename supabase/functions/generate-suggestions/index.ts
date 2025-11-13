@@ -54,7 +54,11 @@ Deno.serve(async (req) => {
       throw new Error('Invalid user token');
     }
 
-    console.log('Generating task scheduling suggestions');
+    // Parse request body to check for specific taskId
+    const body = await req.json().catch(() => ({}));
+    const specificTaskId = body.taskId;
+
+    console.log('Generating task scheduling suggestions', specificTaskId ? `for task ${specificTaskId}` : 'for all unscheduled tasks');
 
     // Fetch user's profile
     const { data: profile } = await supabase
@@ -83,15 +87,29 @@ Deno.serve(async (req) => {
     const now = new Date();
     const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Only schedule tasks that are missing date OR time (unscheduled tasks)
-    // Limit to top 10 by priority to avoid overwhelming the AI
-    const unscheduledTasks = allTasks
-      .filter(t => !t.scheduled_date || !t.scheduled_time)
-      .sort((a, b) => {
-        const priorityMap: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
-        return (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
-      })
-      .slice(0, 10);
+    // If taskId provided, only schedule that specific task. Otherwise, schedule up to 10 unscheduled tasks
+    let unscheduledTasks;
+    if (specificTaskId) {
+      // Filter for the specific task only
+      unscheduledTasks = allTasks.filter(t => 
+        t.id === specificTaskId && (!t.scheduled_date || !t.scheduled_time)
+      );
+      if (unscheduledTasks.length === 0) {
+        return new Response(
+          JSON.stringify({ message: 'Task already scheduled or not found', suggestions: [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // Schedule up to 10 unscheduled tasks by priority
+      unscheduledTasks = allTasks
+        .filter(t => !t.scheduled_date || !t.scheduled_time)
+        .sort((a, b) => {
+          const priorityMap: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
+          return (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+        })
+        .slice(0, 10);
+    }
     
     // Tasks with both date AND time are already scheduled - treat as conflicts to avoid
     // CRITICAL: Only include scheduled tasks in the NEXT 7 DAYS to reduce token count
