@@ -410,47 +410,41 @@ export function TaskCreationDialog({ open, onOpenChange, onTaskCreated, userProf
       }
 
       // Create single task
-      const needsAIScheduling = !taskToCreate.scheduled_date || !taskToCreate.scheduled_time;
+      // If no date/time provided, assign tomorrow at wake time as default
+      let finalDate = taskToCreate.scheduled_date;
+      let finalTime = taskToCreate.scheduled_time;
       
-      const { data: newTask, error } = await supabase.from('tasks').insert({
+      if (!finalDate || !finalTime) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(8, 0, 0, 0); // Default to 8 AM
+        
+        if (!finalDate) {
+          finalDate = tomorrow.toISOString().split('T')[0];
+        }
+        if (!finalTime) {
+          finalTime = '08:00:00';
+        }
+      }
+      
+      const { error } = await supabase.from('tasks').insert({
         user_id: user.id,
         title: taskToCreate.title,
         description: taskToCreate.description,
         duration_minutes: taskToCreate.duration_minutes,
         priority: taskToCreate.priority,
         tags: taskToCreate.tags.split(',').map(t => t.trim()).filter(Boolean),
-        scheduled_date: taskToCreate.scheduled_date || null,
-        scheduled_time: taskToCreate.scheduled_time || null,
+        scheduled_date: finalDate,
+        scheduled_time: finalTime,
         commute_minutes: taskToCreate.commute_minutes,
         recurrence_pattern: taskToCreate.recurrence_pattern,
         recurrence_days: taskToCreate.recurrence_days,
         recurrence_end_date: taskToCreate.recurrence_end_date || null,
         status: 'scheduled',
-      }).select().single();
+      });
 
       if (error) throw error;
-
-      // If no date/time provided, use AI to schedule it intelligently
-      if (needsAIScheduling && newTask) {
-        toast.info('AI is finding the best time for your task...');
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          await supabase.functions.invoke('generate-suggestions', {
-            body: { taskId: newTask.id },
-            headers: {
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-          });
-          
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          toast.success('Task created and intelligently scheduled!');
-        } catch (aiError) {
-          console.error('AI scheduling error:', aiError);
-          toast.error('Task created but smart scheduling failed.');
-        }
-      } else {
-        toast.success('Task created successfully!');
-      }
+      toast.success('Task created successfully!');
 
       setNewTask({
         title: '',
